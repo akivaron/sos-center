@@ -1,10 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Copy } from "../i18n";
-import { colors, shadow } from "../theme";
+import { colors } from "../theme";
 import type { TabKey } from "../types";
 
 const tabs: { key: TabKey; icon: keyof typeof MaterialCommunityIcons.glyphMap; label: keyof Copy }[] = [
@@ -21,7 +20,7 @@ export function BottomTabs({ current, copy, bottom, onChange }: {
   onChange: (tab: TabKey) => void;
 }) {
   return (
-    <BlurView intensity={85} tint="light" style={[styles.shell, { bottom: bottom + 12 }]} testID="main-tab-bar">
+    <View style={[styles.shell, { height: 80 + bottom, paddingBottom: bottom }]} testID="main-tab-bar">
       <View style={styles.row}>
         {tabs.map((tab) => {
           const active = current === tab.key;
@@ -35,21 +34,25 @@ export function BottomTabs({ current, copy, bottom, onChange }: {
               style={({ pressed }) => [styles.item, pressed && styles.pressed]}
               testID={`${tab.key}-tab-button`}
             >
-              <MaterialCommunityIcons name={tab.icon} size={23} color={active ? colors.brand : colors.inkSoft} />
+              <View style={[styles.indicator, active && styles.indicatorActive]}>
+                <MaterialCommunityIcons name={tab.icon} size={23} color={active ? colors.onPrimaryContainer : colors.inkSoft} />
+              </View>
               <Text style={[styles.label, active && styles.activeLabel]} numberOfLines={1}>{copy[tab.label]}</Text>
             </Pressable>
           );
         })}
       </View>
-    </BlurView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shell: { position: "absolute", left: 16, right: 16, height: 72, borderRadius: 24, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.75)", ...shadow },
-  row: { flex: 1, flexDirection: "row", backgroundColor: "rgba(255,255,255,0.72)", paddingHorizontal: 6 },
-  item: { flex: 1, minHeight: 60, alignItems: "center", justifyContent: "center", gap: 3 },
-  pressed: { opacity: 0.55, transform: [{ scale: 0.96 }] },
-  label: { fontSize: 10, fontWeight: "700", color: colors.inkSoft },
-  activeLabel: { color: colors.brand },
+  shell: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.surfaceContainer, borderTopWidth: 1, borderTopColor: colors.border },
+  row: { flex: 1, flexDirection: "row", paddingHorizontal: 8 },
+  item: { flex: 1, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 4 },
+  indicator: { width: 64, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  indicatorActive: { backgroundColor: colors.secondaryContainer },
+  pressed: { opacity: 0.65 },
+  label: { fontSize: 11, fontWeight: "600", color: colors.inkSoft },
+  activeLabel: { color: colors.onPrimaryContainer, fontWeight: "700" },
 });

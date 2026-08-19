@@ -15,7 +15,8 @@
         "NSLocationWhenInUseUsageDescription": "Show nearby emergencies and your position.",
         "NSBluetoothAlwaysUsageDescription": "Connect with nearby people during emergencies.",
         "NSBluetoothPeripheralUsageDescription": "Let nearby devices exchange emergency messages.",
-        "NSLocalNetworkUsageDescription": "Find nearby devices for offline emergency chat."
+        "NSLocalNetworkUsageDescription": "Find nearby devices for offline emergency chat.",
+        "NSPhotoLibraryUsageDescription": "Attach incident evidence to your report."
       }
     },
     "android": {
@@ -59,6 +60,12 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Show nearby emergencies and your position."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Attach incident evidence to your report."
         }
       ],
       [

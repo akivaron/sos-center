@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", textAlign: "center", opacity: 0.9 },
   count: { color: "#FFFFFF", fontSize: 148, lineHeight: 170, fontWeight: "900", letterSpacing: -8, marginVertical: 8 },
   signal: { color: "rgba(255,255,255,0.75)", fontSize: 11, fontWeight: "900", letterSpacing: 1.8 },
-  cancel: { position: "absolute", bottom: "13%", left: 28, right: 28, minHeight: 60, backgroundColor: "#FFFFFF", borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  cancel: { position: "absolute", bottom: "13%", left: 28, right: 28, minHeight: 60, backgroundColor: "#FFFFFF", borderRadius: 30, alignItems: "center", justifyContent: "center" },
   cancelText: { color: "#B91C1C", fontSize: 18, fontWeight: "900" },
   pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
 });

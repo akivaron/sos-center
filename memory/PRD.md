@@ -44,6 +44,10 @@ Membangun aplikasi keselamatan mobile berbasis peta yang menampilkan laporan ben
 - Selesai: BLE transport native (scan/advertise/connect/GATT write), izin kontekstual, fallback preview, dan chat delivery states.
 - Selesai: bilingual ID/EN, profil, permission rationale, safe areas, bottom tabs, toast, dan haptic feedback.
 - Selesai: lint, TypeScript, Expo Doctor 18/18, backend API tests 8/8, dan frontend mobile-web regression.
+- Selesai: revamp visual menyeluruh ke Material Design 3 dengan tonal surfaces, M3 navigation bar, choice chips, cards, FAB, dan filled/outlined buttons.
+- Selesai: wizard laporan dua langkah berisi jenis kejadian, severity, deskripsi, jumlah korban, kebutuhan bantuan, lokasi, dan foto wajib.
+- Selesai: unggah/download foto melalui Emergent Managed Object Storage; MongoDB hanya menyimpan metadata dan `photo_file_id`.
+- Selesai: pengujian wizard terautentikasi, file chooser web, multipart upload, laporan lengkap, dan backend media workflow 16/16.
 
 ## Prioritized Backlog
 ### P0

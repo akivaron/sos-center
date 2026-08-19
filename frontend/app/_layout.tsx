@@ -1,4 +1,3 @@
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -30,9 +29,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <BottomSheetModalProvider>
-            <Stack screenOptions={{ headerShown: false }} />
-          </BottomSheetModalProvider>
+          <Stack screenOptions={{ headerShown: false }} />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

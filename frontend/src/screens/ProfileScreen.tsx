@@ -65,15 +65,15 @@ export function ProfileScreen({ copy, language, user, onLanguage, onLogout }: {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FAFAFA" }, content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 128 },
-  eyebrow: { color: colors.brand, fontSize: 11, fontWeight: "900", letterSpacing: 1.4 }, title: { color: colors.ink, fontSize: 30, fontWeight: "900", letterSpacing: -0.8, marginTop: 4, marginBottom: 22 },
-  profileCard: { minHeight: 92, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 13 },
-  avatar: { width: 60, height: 60, borderRadius: 20 }, avatarFallback: { width: 60, height: 60, borderRadius: 20, backgroundColor: colors.dark, alignItems: "center", justifyContent: "center" },
-  profileText: { flex: 1 }, name: { color: colors.ink, fontSize: 17, fontWeight: "900" }, email: { color: colors.inkSoft, fontSize: 12, marginTop: 4 },
-  verified: { width: 34, height: 34, borderRadius: 12, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center" }, guestBadge: { backgroundColor: colors.surfaceSoft },
+  screen: { flex: 1, backgroundColor: colors.surface }, content: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 128 },
+  eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "700", letterSpacing: 1.2 }, title: { color: colors.ink, fontSize: 32, fontWeight: "700", marginTop: 4, marginBottom: 22 },
+  profileCard: { minHeight: 96, borderRadius: 16, backgroundColor: colors.surfaceContainer, padding: 16, flexDirection: "row", alignItems: "center", gap: 13 },
+  avatar: { width: 60, height: 60, borderRadius: 30 }, avatarFallback: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  profileText: { flex: 1 }, name: { color: colors.ink, fontSize: 17, fontWeight: "700" }, email: { color: colors.inkSoft, fontSize: 12, marginTop: 4 },
+  verified: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryContainer, alignItems: "center", justifyContent: "center" }, guestBadge: { backgroundColor: colors.surfaceContainerHigh },
   sectionLabel: { color: colors.ink, fontSize: 14, fontWeight: "900", marginTop: 28, marginBottom: 10 }, segment: { flexDirection: "row", backgroundColor: colors.surfaceSoft, padding: 4, borderRadius: 18, gap: 4 },
-  segmentButton: { flex: 1, minHeight: 46, borderRadius: 14, alignItems: "center", justifyContent: "center" }, segmentActive: { backgroundColor: colors.surface }, segmentText: { color: colors.inkSoft, fontSize: 13, fontWeight: "800" }, segmentTextActive: { color: colors.ink },
-  infoCard: { minHeight: 92, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 14, flexDirection: "row", gap: 12, marginTop: 14 },
-  infoIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#FEF3C7", alignItems: "center", justifyContent: "center" }, infoBody: { flex: 1 }, infoTitle: { color: colors.ink, fontSize: 14, fontWeight: "900" }, infoText: { color: colors.inkSoft, fontSize: 12, lineHeight: 18, marginTop: 5 },
-  logout: { minHeight: 54, borderRadius: 18, borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 24 }, logoutText: { color: colors.brand, fontSize: 15, fontWeight: "900" }, pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
+  segmentButton: { flex: 1, minHeight: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" }, segmentActive: { backgroundColor: colors.secondaryContainer }, segmentText: { color: colors.inkSoft, fontSize: 13, fontWeight: "600" }, segmentTextActive: { color: colors.onPrimaryContainer, fontWeight: "700" },
+  infoCard: { minHeight: 96, borderRadius: 16, backgroundColor: colors.surfaceContainer, padding: 16, flexDirection: "row", gap: 12, marginTop: 14 },
+  infoIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#FCE7B2", alignItems: "center", justifyContent: "center" }, infoBody: { flex: 1 }, infoTitle: { color: colors.ink, fontSize: 14, fontWeight: "700" }, infoText: { color: colors.inkSoft, fontSize: 12, lineHeight: 18, marginTop: 5 },
+  logout: { minHeight: 56, borderRadius: 28, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 24 }, logoutText: { color: colors.primary, fontSize: 15, fontWeight: "700" }, pressed: { opacity: 0.75 },
 });

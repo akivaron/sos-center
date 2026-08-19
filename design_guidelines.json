@@ -1,7 +1,7 @@
 {
   "app_name": "ResQ Map",
-  "personality": "1 iOS-Native Clean",
-  "personality_one_liner": "A highly legible, map-first tactical interface that prioritizes immediate clarity, high-contrast actions, and calm assurance during emergencies.",
+  "personality": "Material Design 3 Emergency",
+  "personality_one_liner": "A map-first Material Design 3 interface using tonal surfaces, expressive emergency actions, and accessible step-by-step reporting.",
   "color": {
     "surface": "#FFFFFF",
     "onSurface": "#18181B",
@@ -58,10 +58,10 @@
     "pill": 999
   },
   "shadow_tier": "2",
-  "navigation": "bottom_tabs",
+  "navigation": "material3_navigation_bar",
   "icon_set": "Phosphor",
   "glassmorphism": {
-    "enabled": true,
+    "enabled": false,
     "do's": [
       "Use glassmorphism for floating UI elements over the map (top status bar, bottom tab bar) to maximize map visibility",
       "Use glass for the bottom sheet drag handle area"

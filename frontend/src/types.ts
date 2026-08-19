@@ -15,12 +15,30 @@ export type Incident = {
   incident_type: IncidentType;
   severity: Severity;
   description: string;
+  casualty_count: number;
+  assistance_needed: string;
+  photo_file_id?: string | null;
   longitude: number;
   latitude: number;
   reporter_id: string;
   reporter_name: string;
   created_at: string;
   distance_meters?: number | null;
+};
+
+export type LocalPhoto = {
+  uri: string;
+  name: string;
+  type: string;
+};
+
+export type ReportDraft = {
+  incidentType: IncidentType;
+  severity: Severity;
+  description: string;
+  casualtyCount: number;
+  assistanceNeeded: string;
+  photo: LocalPhoto;
 };
 
 export type Coordinates = { latitude: number; longitude: number };

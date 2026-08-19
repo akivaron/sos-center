@@ -7,10 +7,13 @@ from pathlib import Path
 import uuid
 
 import httpx
+import requests
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, field_validator
+from starlette.responses import Response
 from starlette.middleware.cors import CORSMiddleware
 
 
@@ -20,6 +23,48 @@ load_dotenv(ROOT_DIR / ".env")
 client = AsyncIOMotorClient(os.environ["MONGO_URL"])
 db = client[os.environ["DB_NAME"]]
 logger = logging.getLogger("resq-map")
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+APP_NAME = "resq-map"
+storage_key: str | None = None
+
+
+def init_storage() -> str:
+    global storage_key
+    if storage_key:
+        return storage_key
+    if not EMERGENT_KEY:
+        raise RuntimeError("Object storage key is not configured")
+    response = requests.post(
+        f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30
+    )
+    response.raise_for_status()
+    storage_key = response.json()["storage_key"]
+    return storage_key
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    response = requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data,
+        timeout=120,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_object(path: str) -> tuple[bytes, str]:
+    key = init_storage()
+    response = requests.get(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.content, response.headers.get("Content-Type", "image/jpeg")
 
 
 class IncidentType(str, Enum):
@@ -56,6 +101,9 @@ class IncidentCreate(BaseModel):
     incident_type: IncidentType
     severity: Severity = Severity.high
     description: str = Field(default="", max_length=280)
+    casualty_count: int = Field(default=0, ge=0, le=10000)
+    assistance_needed: str = Field(default="", max_length=280)
+    photo_file_id: str | None = Field(default=None, max_length=80)
     longitude: float
     latitude: float
 
@@ -79,6 +127,9 @@ class Incident(BaseModel):
     incident_type: IncidentType
     severity: Severity
     description: str
+    casualty_count: int = 0
+    assistance_needed: str = ""
+    photo_file_id: str | None = None
     longitude: float
     latitude: float
     reporter_id: str
@@ -106,6 +157,13 @@ class SOSSignal(BaseModel):
     network_state: str
     status: str
     created_at: str
+
+
+class UploadResult(BaseModel):
+    file_id: str
+    file_url: str
+    content_type: str
+    size: int
 
 
 def utc_iso() -> str:
@@ -152,6 +210,10 @@ async def lifespan(_: FastAPI):
     await db.incidents.create_index([("location", "2dsphere")])
     await db.sos_signals.create_index([("location", "2dsphere")])
     await db.sos_signals.create_index("client_event_id", unique=True)
+    try:
+        await run_in_threadpool(init_storage)
+    except Exception as exc:
+        logger.warning("Object storage initialization deferred: %s", exc)
     yield
     client.close()
 
@@ -213,6 +275,69 @@ async def get_me(user: User = Depends(current_user)):
     return user
 
 
+@api.post("/uploads/incident-photo", response_model=UploadResult, status_code=201)
+async def upload_incident_photo(
+    file: UploadFile = File(...), user: User = Depends(current_user)
+):
+    allowed = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/heic": "heic",
+        "image/heif": "heif",
+    }
+    content_type = file.content_type or ""
+    if content_type not in allowed:
+        raise HTTPException(status_code=415, detail="Unsupported image format")
+    data = await file.read(5 * 1024 * 1024 + 1)
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty image")
+    if len(data) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image exceeds 5 MB")
+    file_id = f"file_{uuid.uuid4().hex[:16]}"
+    path = f"{APP_NAME}/uploads/{user.user_id}/{uuid.uuid4().hex}.{allowed[content_type]}"
+    try:
+        result = await run_in_threadpool(put_object, path, data, content_type)
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else 503
+        if status == 402:
+            raise HTTPException(status_code=402, detail="Photo storage unavailable") from exc
+        raise HTTPException(status_code=503, detail="Photo upload unavailable") from exc
+    file_doc = {
+        "file_id": file_id,
+        "owner_id": user.user_id,
+        "storage_path": result.get("path", path),
+        "original_name": file.filename or f"incident.{allowed[content_type]}",
+        "content_type": content_type,
+        "size": len(data),
+        "created_at": utc_iso(),
+        "attached_to": None,
+    }
+    await db.media_files.insert_one(file_doc)
+    return UploadResult(
+        file_id=file_id,
+        file_url=f"/api/files/{file_id}",
+        content_type=content_type,
+        size=len(data),
+    )
+
+
+@api.get("/files/{file_id}")
+async def download_file(file_id: str, user: User = Depends(current_user)):
+    file_doc = await db.media_files.find_one(
+        {"file_id": file_id, "owner_id": user.user_id}, {"_id": 0}
+    )
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    try:
+        content, content_type = await run_in_threadpool(
+            get_object, file_doc["storage_path"]
+        )
+    except requests.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="File unavailable") from exc
+    return Response(content=content, media_type=content_type)
+
+
 @api.get("/incidents", response_model=list[Incident])
 async def list_incidents(
     longitude: float | None = Query(default=None, ge=-180, le=180),
@@ -233,11 +358,20 @@ async def list_incidents(
 
 @api.post("/incidents", response_model=Incident, status_code=201)
 async def create_incident(payload: IncidentCreate, user: User = Depends(current_user)):
+    if payload.photo_file_id:
+        owned_file = await db.media_files.find_one(
+            {"file_id": payload.photo_file_id, "owner_id": user.user_id}, {"_id": 0}
+        )
+        if not owned_file:
+            raise HTTPException(status_code=400, detail="Incident photo not found")
     incident = Incident(
         id=f"inc_{uuid.uuid4().hex[:14]}",
         incident_type=payload.incident_type,
         severity=payload.severity,
         description=payload.description,
+        casualty_count=payload.casualty_count,
+        assistance_needed=payload.assistance_needed,
+        photo_file_id=payload.photo_file_id,
         longitude=payload.longitude,
         latitude=payload.latitude,
         reporter_id=user.user_id,
@@ -250,6 +384,11 @@ async def create_incident(payload: IncidentCreate, user: User = Depends(current_
         "coordinates": [payload.longitude, payload.latitude],
     }
     await db.incidents.insert_one(doc)
+    if payload.photo_file_id:
+        await db.media_files.update_one(
+            {"file_id": payload.photo_file_id},
+            {"$set": {"attached_to": incident.id}},
+        )
     return incident
 
 

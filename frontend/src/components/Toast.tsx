@@ -16,13 +16,13 @@ export function Toast({ message, onDismiss }: { message: string | null; onDismis
     <Pressable onPress={onDismiss} style={styles.toast} testID="status-toast">
       <View style={styles.icon}><MaterialCommunityIcons name="shield-check" size={19} color="#FFFFFF" /></View>
       <Text style={styles.text}>{message}</Text>
-      <MaterialCommunityIcons name="close" size={18} color={colors.inkSoft} />
+      <MaterialCommunityIcons name="close" size={18} color="#FFFFFF" />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  toast: { position: "absolute", top: 8, left: 18, right: 18, minHeight: 58, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 10, ...shadow },
-  icon: { width: 32, height: 32, borderRadius: 11, backgroundColor: colors.success, alignItems: "center", justifyContent: "center" },
-  text: { flex: 1, color: colors.ink, fontSize: 14, lineHeight: 19, fontWeight: "700" },
+  toast: { position: "absolute", top: 8, left: 18, right: 18, minHeight: 64, paddingHorizontal: 16, borderRadius: 4, backgroundColor: "#322F2E", flexDirection: "row", alignItems: "center", gap: 12, ...shadow },
+  icon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.success, alignItems: "center", justifyContent: "center" },
+  text: { flex: 1, color: "#FFFFFF", fontSize: 14, lineHeight: 20, fontWeight: "500" },
 });

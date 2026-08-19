@@ -3,7 +3,7 @@ import * as Linking from "expo-linking";
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Copy } from "../i18n";
-import { colors } from "../theme";
+import { colors, radius } from "../theme";
 
 export function LocationGate({
   visible,
@@ -45,12 +45,12 @@ export function LocationGate({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(17,24,39,0.5)", justifyContent: "flex-end" },
-  card: { minHeight: "52%", backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, alignItems: "center" },
-  icon: { width: 60, height: 60, borderRadius: 20, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center", marginBottom: 20 },
-  title: { fontSize: 24, lineHeight: 30, fontWeight: "800", color: colors.ink, textAlign: "center" },
+  card: { minHeight: "52%", backgroundColor: colors.surface, borderTopLeftRadius: radius.extraLarge, borderTopRightRadius: radius.extraLarge, padding: 28, alignItems: "center" },
+  icon: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryContainer, alignItems: "center", justifyContent: "center", marginBottom: 20 },
+  title: { fontSize: 24, lineHeight: 30, fontWeight: "700", color: colors.ink, textAlign: "center" },
   body: { fontSize: 16, lineHeight: 24, color: colors.inkSoft, textAlign: "center", marginTop: 12, marginBottom: 28 },
-  primary: { width: "100%", minHeight: 54, borderRadius: 18, backgroundColor: colors.info, alignItems: "center", justifyContent: "center" },
-  primaryText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800" },
+  primary: { width: "100%", minHeight: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  primaryText: { color: colors.onPrimary, fontSize: 16, fontWeight: "700" },
   secondary: { minHeight: 48, paddingHorizontal: 20, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  secondaryText: { color: colors.inkSoft, fontSize: 15, fontWeight: "700" },
+  secondaryText: { color: colors.primary, fontSize: 15, fontWeight: "700" },
 });
