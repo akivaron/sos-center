@@ -1,0 +1,180 @@
+{
+  "app_name": "ResQ Map",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A highly legible, map-first tactical interface that prioritizes immediate clarity, high-contrast actions, and calm assurance during emergencies.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#18181B",
+    "surfaceSecondary": "#F4F4F5",
+    "onSurfaceSecondary": "#3F3F46",
+    "surfaceTertiary": "#E4E4E7",
+    "onSurfaceTertiary": "#52525B",
+    "surfaceInverse": "#18181B",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#DC2626",
+    "brandPrimary": "#DC2626",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#F59E0B",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#FEE2E2",
+    "onBrandTertiary": "#DC2626",
+    "success": "#16A34A",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F59E0B",
+    "onWarning": "#FFFFFF",
+    "error": "#DC2626",
+    "onError": "#FFFFFF",
+    "info": "#3B82F6",
+    "onInfo": "#FFFFFF",
+    "border": "#E4E4E7",
+    "borderStrong": "#A1A1AA",
+    "divider": "#F4F4F5"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous safe-area padding for map overlays. Ensure tap targets for emergency actions are massive. Floating elements must have safe clearance from screen edges.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "2",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use glassmorphism for floating UI elements over the map (top status bar, bottom tab bar) to maximize map visibility",
+      "Use glass for the bottom sheet drag handle area"
+    ],
+    "dont's": [
+      "Do not use glass for the primary SOS button; it must be solid brandPrimary for absolute contrast",
+      "Do not use glass on critical text reading areas"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Auth",
+      "purpose": "Minimalist login screen focusing on Google Sign-In for quick access.",
+      "states": {
+        "loading": "Spinner overlaid on Google button.",
+        "empty": "N/A",
+        "error": "Standard error toast."
+      },
+      "layout": "Centered layout. Large App Logo. Primary action 'Sign in with Google' using the Google logo."
+    },
+    {
+      "name": "MapHome",
+      "purpose": "The primary dashboard. Full-screen map showing incident markers, network status, and immediate access to SOS.",
+      "states": {
+        "loading": "Mapbox placeholder/skeleton.",
+        "empty": "Map with no markers, indicating safe zone.",
+        "error": "Mapbox error state with 'Retry Connection' overlay."
+      },
+      "layout": "Absolute full-screen map. Top safe area contains a floating glass header showing Network Status (Online vs Bluetooth Mesh). Bottom safe area has a floating tab bar. Above the tab bar sits a giant, solid red, circular SOS button (center) and a 'Report' FAB (right). Custom map markers use high-contrast icons for Fire, Flood, Crash, Quake."
+    },
+    {
+      "name": "IncidentReportSheet",
+      "purpose": "Quickly report a disaster to nearby users. Opens as a bottom sheet.",
+      "states": {
+        "loading": "Spinner on submit button.",
+        "empty": "N/A",
+        "error": "Error toast."
+      },
+      "layout": "Bottom sheet (min 50% height). Uses a Bento-box grid of 4 large square buttons (Kebakaran, Banjir, Gempa, Tabrakan). After selection, a full-width sticky CTA at the bottom confirms location and sends the report."
+    },
+    {
+      "name": "SOSCountdown",
+      "purpose": "Full-screen high-stress modal that counts down before broadcasting an SOS. Allows cancellation.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Full-bleed Red (brandPrimary) background. Giant numeric typography for countdown (5..4..3..2..1) in the center. A large 'Batalkan / Cancel' button at the bottom third."
+    },
+    {
+      "name": "MeshChatList",
+      "purpose": "List of nearby devices or ongoing emergency broadcast chats via Bluetooth.",
+      "states": {
+        "loading": "Skeleton list.",
+        "empty": "Illustration of searching for nearby peers.",
+        "error": "Bluetooth disabled warning."
+      },
+      "layout": "Standard iOS list view. A pinned status chip at the top indicates 'X Peers Nearby'. List items show connection strength."
+    },
+    {
+      "name": "MeshChatRoom",
+      "purpose": "Offline chat interface. Must clearly show message delivery status.",
+      "states": {
+        "loading": "N/A",
+        "empty": "Empty chat background.",
+        "error": "Message failed to queue."
+      },
+      "layout": "Standard chat interface inside KeyboardAvoidingView. Message bubbles include explicit metadata (Queued, Relayed, Delivered) to reflect mesh reality. Pinned header shows active peers."
+    }
+  ],
+  "images": {
+    "auth_google_logo": {
+      "url": "https://images.pexels.com/photos/13628541/pexels-photo-13628541.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Google sign in logo"
+    },
+    "auth_background_fallback": {
+      "url": "https://images.unsplash.com/photo-1563393934034-21b781d905ef?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwxfHwlMjJlbWVyZ2VuY3klMjByZXNjdWUlMjBzYWZldHklMjJ8ZW58MHx8fHwxNzg3MTYwNDE5fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Emergency rescue safety background"
+    },
+    "mesh_empty_state": {
+      "url": "https://images.pexels.com/photos/8108674/pexels-photo-8108674.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Mesh network illustration"
+    }
+  },
+  "haptics": {
+    "sos_button_press": "heavy",
+    "sos_countdown_tick": "medium",
+    "incident_report_select": "light",
+    "mesh_message_sent": "success",
+    "tab_change": "light"
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the iOS-Native Clean layout principles: map is the hero, UI chrome is floating and minimal.",
+    "Implement the map as a full-screen absolute layer. Ensure all top headers and bottom tabs respect Safe Area and float above the map using glassmorphism (`expo-glass-effect` or `expo-blur`).",
+    "The SOS button must be prominent (circular, massive) and sit above the bottom tabs. Use `hitSlop` to increase its touch target.",
+    "Build the Incident Report feature inside a `@gorhom/bottom-sheet` configured for at least 50% height. Do not navigate away from the map to report an incident.",
+    "In the offline Mesh Chat room, it is critical to display the transport status of each message (Queued, Relayed, Delivered) as offline mesh networks are not instantaneous.",
+    "For the SOS Countdown, implement a full-screen modal overlay with a 5-second countdown. Integrate haptic feedback (`haptics.sos_countdown_tick`) on every second change.",
+    "The app must support Indonesian (ID) and English (EN). Ensure UI elements and buttons (like 'Batalkan / Cancel') have enough width to accommodate text expansion.",
+    "Ensure every interactive element has a `testID` attribute.",
+    "Always apply the gradient-to-dark scrim pattern (Layer 0: expo-image, Layer 1: linear-gradient, Layer 2: text) when overlaying text on image backgrounds like the Auth screen."
+  ]
+}

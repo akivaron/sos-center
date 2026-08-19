@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "ResQ Map",
+    "slug": "resq-map",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "resqmap",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.emergent.crisisbeacon.uhbrp7",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Show nearby emergencies and your position.",
+        "NSBluetoothAlwaysUsageDescription": "Connect with nearby people during emergencies.",
+        "NSBluetoothPeripheralUsageDescription": "Let nearby devices exchange emergency messages.",
+        "NSLocalNetworkUsageDescription": "Find nearby devices for offline emergency chat."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.emergent.crisisbeacon.uhbrp7",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_ADVERTISE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-image.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsVersion": "11.20.1"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Show nearby emergencies and your position."
+        }
+      ],
+      [
+        "munim-bluetooth",
+        {
+          "androidBluetoothPermissions": ["scan", "connect", "advertise"],
+          "multipeerServiceTypes": ["resq-mesh"],
+          "localNetworkUsageDescription": "Find nearby devices for offline emergency chat."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
