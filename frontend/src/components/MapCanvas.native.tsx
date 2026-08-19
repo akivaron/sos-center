@@ -15,6 +15,7 @@ const icons = {
   crash: "car-emergency",
   other: "alert-circle",
 } as const;
+const markerColors = { fire: "#BA1A1A", flood: "#00639B", earthquake: "#6750A4", crash: "#8A5100", other: "#5D5D66" } as const;
 
 export default function MapCanvas(props: {
   incidents: Incident[];
@@ -37,8 +38,9 @@ export default function MapCanvas(props: {
           coordinate={[incident.longitude, incident.latitude]}
           onSelected={() => props.onIncidentPress(incident)}
         >
-          <View style={styles.marker}>
+          <View style={[styles.marker, { backgroundColor: markerColors[incident.incident_type] }]}>
             <MaterialCommunityIcons name={icons[incident.incident_type]} size={20} color="#FFFFFF" />
+            <View style={[styles.severityDot, incident.severity === "critical" && styles.criticalDot]} />
           </View>
         </Mapbox.PointAnnotation>
       ))}
@@ -48,5 +50,7 @@ export default function MapCanvas(props: {
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
-  marker: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#DC2626", borderWidth: 3, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  marker: { width: 46, height: 46, borderRadius: 23, borderWidth: 3, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  severityDot: { position: "absolute", top: -2, right: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: "#F7C86B", borderWidth: 2, borderColor: "#FFFFFF" },
+  criticalDot: { backgroundColor: "#FF5449" },
 });

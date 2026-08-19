@@ -29,6 +29,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  mediaUrl: (path?: string | null) => path ? (path.startsWith("http") ? path : `${baseUrl}${path}`) : null,
   exchangeSession: (sessionId: string) =>
     request<{ session_token: string; user: User }>("/auth/session", {
       method: "POST",

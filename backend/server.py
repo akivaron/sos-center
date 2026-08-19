@@ -130,6 +130,7 @@ class Incident(BaseModel):
     casualty_count: int = 0
     assistance_needed: str = ""
     photo_file_id: str | None = None
+    photo_url: str | None = None
     longitude: float
     latitude: float
     reporter_id: str
@@ -177,6 +178,13 @@ def user_from_doc(doc: dict) -> User:
         name=doc.get("name") or doc["email"].split("@")[0],
         picture=doc.get("picture"),
     )
+
+
+def incident_from_doc(doc: dict) -> Incident:
+    clean = {key: value for key, value in doc.items() if key not in {"_id", "location"}}
+    file_id = clean.get("photo_file_id")
+    clean["photo_url"] = f"/api/incident-media/{file_id}" if file_id else None
+    return Incident(**clean)
 
 
 async def current_user(authorization: str | None = Header(default=None)) -> User:
@@ -338,6 +346,35 @@ async def download_file(file_id: str, user: User = Depends(current_user)):
     return Response(content=content, media_type=content_type)
 
 
+@api.get("/incident-media/{file_id}")
+async def public_incident_media(file_id: str):
+    file_doc = await db.media_files.find_one(
+        {"file_id": file_id, "attached_to": {"$ne": None}}, {"_id": 0}
+    )
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="Incident media not found")
+    incident = await db.incidents.find_one(
+        {"id": file_doc["attached_to"], "photo_file_id": file_id}, {"_id": 0, "id": 1}
+    )
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident media not found")
+    try:
+        content, content_type = await run_in_threadpool(
+            get_object, file_doc["storage_path"]
+        )
+    except requests.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="Incident media unavailable") from exc
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "public, max-age=300",
+            "CDN-Cache-Control": "public, max-age=300",
+            "Surrogate-Control": "max-age=300",
+        },
+    )
+
+
 @api.get("/incidents", response_model=list[Incident])
 async def list_incidents(
     longitude: float | None = Query(default=None, ge=-180, le=180),
@@ -353,7 +390,7 @@ async def list_incidents(
             }
         }
     rows = await db.incidents.find(query, {"_id": 0}).limit(250).to_list(250)
-    return [Incident(**row) for row in rows]
+    return [incident_from_doc(row) for row in rows]
 
 
 @api.post("/incidents", response_model=Incident, status_code=201)
@@ -372,13 +409,17 @@ async def create_incident(payload: IncidentCreate, user: User = Depends(current_
         casualty_count=payload.casualty_count,
         assistance_needed=payload.assistance_needed,
         photo_file_id=payload.photo_file_id,
+        photo_url=(
+            f"/api/incident-media/{payload.photo_file_id}"
+            if payload.photo_file_id else None
+        ),
         longitude=payload.longitude,
         latitude=payload.latitude,
         reporter_id=user.user_id,
         reporter_name=user.name,
         created_at=utc_iso(),
     )
-    doc = incident.model_dump()
+    doc = incident.model_dump(exclude={"photo_url"})
     doc["location"] = {
         "type": "Point",
         "coordinates": [payload.longitude, payload.latitude],

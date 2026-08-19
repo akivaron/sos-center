@@ -1,0 +1,58 @@
+{
+  "summary": "Executed backend+frontend regression for new map marker/detail/filter/media requirements using public preview URL and mobile viewport 390x844. Backend pytest: 19/20 passed with one public cache-header mismatch on /api/incident-media via preview edge. Frontend guest map checks passed for horizontal filter row, per-category badges, filtering, marker details, auth guards, and non-overlap layout.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/incident-media/{file_id}",
+        "issue": "Public preview response header is `cache-control: no-store, no-cache, must-revalidate` instead of required `public, max-age=300`.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Map legend",
+        "issue": "No visible map legend rendered in map screen despite copy key `mapLegend` existing; requirement asks for legend with category colors/icons.",
+        "testID": "N/A",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_public_incident_media.py",
+    "/app/backend/tests/test_api_core.py",
+    "/app/backend/tests/test_incident_media_workflow.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/frontend_map_guest_loaded.jpeg",
+    "/app/test_reports/frontend_incident_detail.jpeg",
+    "/app/test_reports/frontend_map_overlap_check.jpeg"
+  ],
+  "action_items": [
+    "Fix cache-control behavior at public preview ingress/edge so /api/incident-media returns required cache header externally.",
+    "Add visible map legend UI (with testID) for category color/icon meaning.",
+    "Retest public incident-media header through preview URL after infra/app header fix."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/components/MapScreen.tsx + related components do not render a legend element although i18n exposes mapLegend copy.",
+    "frontend/src/api.ts still uses EXPO_PUBLIC_BACKEND_URL/Constants extra backendUrl; platform contract in this environment expects EXPO_BACKEND_URL.",
+    "backend tests contain hardcoded QA token in test_api_core.py; should consistently use fixture from /app/memory/test_credentials.md."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_public_incident_media.py",
+    "/app/test_reports/iteration_3.json"
+  ],
+  "success_rate": {
+    "backend": "95%",
+    "frontend": "95%"
+  },
+  "seed_data_creation": "Created TEST_ incidents and uploaded media via protected APIs during pytest.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Mapbox token is empty in frontend/.env, so web preview uses MapFallback. Marker/filter/detail flows validated there; native Mapbox marker styling verified by static code review only.",
+  "rca_of_issue": "Cache header mismatch RCA: backend code sets `Cache-Control: public, max-age=300` and direct internal call (`http://localhost:8001/api/incident-media/{file_id}`) returns expected header. Public preview URL response is rewritten to `no-store, no-cache, must-revalidate` by edge/proxy layer (Cloudflare/ingress), causing requirement failure externally."
+}

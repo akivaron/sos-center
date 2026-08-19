@@ -1,11 +1,14 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "../api";
 import { LocationGate } from "../components/LocationGate";
+import { IncidentInfoCard } from "../components/IncidentInfoCard";
+import { MapFilterBar, type MapFilter } from "../components/MapFilterBar";
+import { MapLegend } from "../components/MapLegend";
 import MapCanvas from "../components/MapCanvas";
 import { ReportFormModal } from "../components/ReportFormModal";
 import { SOSCountdown } from "../components/SOSCountdown";
@@ -33,6 +36,11 @@ export function MapScreen({ copy, user, network, incidents, onIncidentsChange }:
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [filter, setFilter] = useState<MapFilter>("all");
+  const visibleIncidents = useMemo(
+    () => filter === "all" ? incidents : incidents.filter((item) => item.incident_type === filter),
+    [filter, incidents],
+  );
 
   const loadIncidents = useCallback(async () => {
     try { onIncidentsChange(await api.incidents(location.coordinates ?? undefined)); } catch { /* keep map usable */ }
@@ -119,7 +127,7 @@ export function MapScreen({ copy, user, network, incidents, onIncidentsChange }:
 
   return (
     <View style={styles.screen} testID="map-screen">
-      <MapCanvas incidents={incidents} coordinates={location.coordinates} onIncidentPress={setSelectedIncident} />
+      <MapCanvas incidents={visibleIncidents} coordinates={location.coordinates} onIncidentPress={setSelectedIncident} />
       <View style={[styles.header, { top: insets.top + 8 }]} testID="network-status-header">
         <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
         <View style={styles.headerText}>
@@ -132,35 +140,39 @@ export function MapScreen({ copy, user, network, incidents, onIncidentsChange }:
         </View>
       </View>
 
-      {incidents.length === 0 ? (
-        <View style={[styles.safeChip, { top: insets.top + 86 }]} testID="safe-zone-banner">
+      <MapFilterBar
+        top={insets.top + 80}
+        incidents={incidents}
+        selected={filter}
+        copy={copy}
+        onSelect={(next) => { setFilter(next); setSelectedIncident(null); }}
+      />
+      <MapLegend top={insets.top + 142} copy={copy} />
+
+      {visibleIncidents.length === 0 ? (
+        <View style={[styles.safeChip, { top: insets.top + 212 }]} testID="safe-zone-banner">
           <MaterialCommunityIcons name="shield-check" size={17} color={colors.success} />
           <Text style={styles.safeText}>{copy.safeZone}</Text>
         </View>
       ) : null}
 
-      <Pressable onPress={() => { setLocationGate(true); }} style={({ pressed }) => [styles.locate, { top: insets.top + 92 }, pressed && styles.pressed]} testID="locate-me-button">
+      <Pressable onPress={() => { setLocationGate(true); }} style={({ pressed }) => [styles.locate, { top: insets.top + 144 }, pressed && styles.pressed]} testID="locate-me-button">
         {location.loading ? <ActivityIndicator color={colors.info} /> : <MaterialCommunityIcons name="crosshairs-gps" size={23} color={colors.info} />}
       </Pressable>
 
       {selectedIncident ? (
-        <Pressable onPress={() => setSelectedIncident(null)} style={[styles.incidentCard, { bottom: insets.bottom + 190 }]} testID="incident-detail-card">
-          <View style={styles.incidentIcon}><MaterialCommunityIcons name="alert" size={22} color="#FFFFFF" /></View>
-          <View style={styles.incidentText}>
-            <Text style={styles.incidentTitle}>{copy[selectedIncident.incident_type]}</Text>
-            <Text style={styles.incidentMeta} numberOfLines={2}>{selectedIncident.description || `${copy.nearbyAlert} • ${selectedIncident.reporter_name}`}</Text>
-          </View>
-          <MaterialCommunityIcons name="close" size={20} color={colors.inkSoft} />
-        </Pressable>
+        <IncidentInfoCard incident={selectedIncident} copy={copy} bottom={insets.bottom + 88} onClose={() => setSelectedIncident(null)} />
       ) : null}
 
-      <Pressable onPress={openReport} style={({ pressed }) => [styles.reportButton, { bottom: insets.bottom + 106 }, pressed && styles.pressed]} testID="open-report-button">
-        <MaterialCommunityIcons name="alert-plus" size={23} color="#FFFFFF" />
-        <Text style={styles.reportText}>{copy.report}</Text>
-      </Pressable>
-      <Pressable onPress={startSOS} hitSlop={12} style={({ pressed }) => [styles.sosButton, { bottom: insets.bottom + 104 }, pressed && styles.sosPressed]} testID="sos-trigger-button">
-        <View style={styles.sosInner}><Text style={styles.sosText}>{copy.sos}</Text></View>
-      </Pressable>
+      {!selectedIncident ? <>
+        <Pressable onPress={openReport} style={({ pressed }) => [styles.reportButton, { bottom: insets.bottom + 106 }, pressed && styles.pressed]} testID="open-report-button">
+          <MaterialCommunityIcons name="alert-plus" size={23} color="#FFFFFF" />
+          <Text style={styles.reportText}>{copy.report}</Text>
+        </Pressable>
+        <Pressable onPress={startSOS} hitSlop={12} style={({ pressed }) => [styles.sosButton, { bottom: insets.bottom + 104 }, pressed && styles.sosPressed]} testID="sos-trigger-button">
+          <View style={styles.sosInner}><Text style={styles.sosText}>{copy.sos}</Text></View>
+        </Pressable>
+      </> : null}
 
       <ReportFormModal
         visible={reportVisible}
@@ -195,7 +207,7 @@ const styles = StyleSheet.create({
   network: { fontSize: 12, fontWeight: "500", color: colors.inkSoft, marginTop: 1 },
   alertCount: { minWidth: 48, height: 40, borderRadius: 20, backgroundColor: colors.surfaceContainer, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
   alertCountText: { color: colors.ink, fontSize: 13, fontWeight: "700" },
-  safeChip: { position: "absolute", alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 7, borderRadius: 8, backgroundColor: colors.surface, paddingHorizontal: 14, height: 40, ...shadow },
+  safeChip: { position: "absolute", left: 16, right: 80, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, borderRadius: 8, backgroundColor: colors.surface, paddingHorizontal: 14, height: 40, ...shadow },
   safeText: { color: colors.ink, fontSize: 12, fontWeight: "600" },
   locate: { position: "absolute", right: 16, width: 56, height: 56, borderRadius: 18, backgroundColor: colors.primaryContainer, alignItems: "center", justifyContent: "center", ...shadow },
   reportButton: { position: "absolute", right: 20, minHeight: 56, borderRadius: 18, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 18, ...shadow },
@@ -205,10 +217,5 @@ const styles = StyleSheet.create({
   sosText: { color: "#FFFFFF", fontSize: 19, fontWeight: "900", letterSpacing: 0.5 },
   pressed: { opacity: 0.78, transform: [{ scale: 0.96 }] },
   sosPressed: { transform: [{ scale: 0.92 }] },
-  incidentCard: { position: "absolute", left: 16, right: 16, minHeight: 80, borderRadius: radius.large, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", padding: 14, gap: 12, ...shadow },
-  incidentIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center" },
-  incidentText: { flex: 1 },
-  incidentTitle: { fontSize: 16, fontWeight: "700", color: colors.ink },
-  incidentMeta: { fontSize: 13, color: colors.inkSoft, marginTop: 3, lineHeight: 18 },
   toastLayer: { position: "absolute", left: 0, right: 0, height: 80 },
 });

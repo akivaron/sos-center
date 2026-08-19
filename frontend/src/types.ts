@@ -18,6 +18,7 @@ export type Incident = {
   casualty_count: number;
   assistance_needed: string;
   photo_file_id?: string | null;
+  photo_url?: string | null;
   longitude: number;
   latitude: number;
   reporter_id: string;

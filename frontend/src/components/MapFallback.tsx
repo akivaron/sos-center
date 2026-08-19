@@ -67,6 +67,7 @@ export function MapFallback({
           testID={`incident-marker-${incident.id}`}
         >
           <MaterialCommunityIcons name={markerIcon[incident.incident_type]} size={21} color="#FFFFFF" />
+          <View style={[styles.severityDot, incident.severity === "critical" && styles.criticalDot]} />
         </Pressable>
       ))}
     </View>
@@ -84,4 +85,6 @@ const styles = StyleSheet.create({
   userHalo: { position: "absolute", width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(37,99,235,0.2)", alignItems: "center", justifyContent: "center" },
   userDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.info, borderWidth: 3, borderColor: "#FFFFFF" },
   marker: { position: "absolute", width: 44, height: 44, borderRadius: 22, borderWidth: 3, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center", shadowColor: "#18181B", shadowOpacity: 0.22, shadowRadius: 10, elevation: 6 },
+  severityDot: { position: "absolute", top: -2, right: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: "#F7C86B", borderWidth: 2, borderColor: "#FFFFFF" },
+  criticalDot: { backgroundColor: "#FF5449" },
 });

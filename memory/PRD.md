@@ -48,6 +48,9 @@ Membangun aplikasi keselamatan mobile berbasis peta yang menampilkan laporan ben
 - Selesai: wizard laporan dua langkah berisi jenis kejadian, severity, deskripsi, jumlah korban, kebutuhan bantuan, lokasi, dan foto wajib.
 - Selesai: unggah/download foto melalui Emergent Managed Object Storage; MongoDB hanya menyimpan metadata dan `photo_file_id`.
 - Selesai: pengujian wizard terautentikasi, file chooser web, multipart upload, laporan lengkap, dan backend media workflow 16/16.
+- Selesai: marker peta berwarna dan berikon per kategori dengan severity dot, filter horizontal, count badge, serta legenda eksplisit.
+- Selesai: kartu informasi marker menampilkan severity, waktu, pelapor, deskripsi, korban, koordinat, kebutuhan bantuan, dan foto bukti publik.
+- Selesai: endpoint media insiden publik memverifikasi attachment sebelum menyajikan gambar; regresi backend langsung lulus 20/20.
 
 ## Prioritized Backlog
 ### P0
