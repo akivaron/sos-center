@@ -328,7 +328,7 @@ export function useMeshChat(user: User | null) {
         peerName: meName,
         onPeers: (linkPeers) => {
           linkPeers.forEach((p) => mergePeer({
-            id: p.id, name: p.name, rssi: p.rssi, online: true, simulated: p.simulated,
+            id: p.id, name: p.name, rssi: p.rssi, online: true, simulated: p.simulated, link: p.link,
           }));
         },
         onFrame: (raw) => void handleFrame(raw),

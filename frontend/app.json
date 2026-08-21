@@ -16,6 +16,7 @@
         "NSBluetoothAlwaysUsageDescription": "Connect with nearby people during emergencies.",
         "NSBluetoothPeripheralUsageDescription": "Let nearby devices exchange emergency messages.",
         "NSLocalNetworkUsageDescription": "Find nearby devices for offline emergency chat.",
+        "NSNearbyWifiUsageDescription": "Discover nearby devices over Wi-Fi Direct for offline mesh chat.",
         "NSPhotoLibraryUsageDescription": "Attach incident evidence to your report."
       }
     },
@@ -29,9 +30,14 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
+        "CHANGE_NETWORK_STATE",
+        "CHANGE_WIFI_STATE",
+        "ACCESS_WIFI_STATE",
+        "INTERNET",
         "BLUETOOTH_SCAN",
         "BLUETOOTH_CONNECT",
-        "BLUETOOTH_ADVERTISE"
+        "BLUETOOTH_ADVERTISE",
+        "NEARBY_WIFI_DEVICES"
       ]
     },
     "web": {
@@ -62,20 +68,7 @@
           "photosPermission": "Attach incident evidence to your report."
         }
       ],
-      [
-        "munim-bluetooth",
-        {
-          "androidBluetoothPermissions": [
-            "scan",
-            "connect",
-            "advertise"
-          ],
-          "multipeerServiceTypes": [
-            "resq-mesh"
-          ],
-          "localNetworkUsageDescription": "Find nearby devices for offline emergency chat."
-        }
-      ],
+      "./plugins/withResqMesh",
       "@maplibre/maplibre-react-native"
     ],
     "experiments": {

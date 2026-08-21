@@ -202,6 +202,7 @@ function ConversationList({ copy, mesh, onOpen }: { copy: Copy; mesh: MeshApi; o
           <View style={styles.rowBody}>
             <View style={styles.rowTop}>
               <Text style={styles.rowName} numberOfLines={1}>{row.name}</Text>
+              {row.link === "wifi" ? <MaterialCommunityIcons name="wifi" size={13} color={colors.info} /> : null}
               {row.encrypted ? <MaterialCommunityIcons name="lock" size={13} color={colors.success} /> : null}
               <Text style={styles.rowTime}>{row.lastAt ? formatTime(row.lastAt, copy) : ""}</Text>
             </View>
@@ -218,7 +219,7 @@ function ConversationList({ copy, mesh, onOpen }: { copy: Copy; mesh: MeshApi; o
 }
 
 function buildRows(mesh: MeshApi, copy: Copy) {
-  type Row = { key: string; peerId: string | null; name: string; online: boolean; encrypted: boolean; lastMessage: string; lastAt: number; unread: number; simulated?: boolean };
+  type Row = { key: string; peerId: string | null; name: string; online: boolean; encrypted: boolean; lastMessage: string; lastAt: number; unread: number; simulated?: boolean; link?: "ble" | "wifi" | "sim" };
   const rows: Row[] = [];
   const byPeer = new Map<string, MeshConversation>();
   mesh.conversations.forEach((c) => { if (c.peerId) byPeer.set(c.peerId, c); });
@@ -240,6 +241,7 @@ function buildRows(mesh: MeshApi, copy: Copy) {
       lastAt: conv?.lastAt ?? 0,
       unread: conv?.unread ?? 0,
       simulated: peer.simulated,
+      link: peer.link,
     });
   });
 

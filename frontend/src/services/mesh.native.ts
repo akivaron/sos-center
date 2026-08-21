@@ -1,127 +1,80 @@
-// Native mesh transport over Bluetooth Low Energy. Carries already-encoded
-// mesh envelopes as hex strings across a custom GATT characteristic. Encryption,
-// relay and de-duplication are handled by the protocol layer; the link layer is
-// OS-encrypted (writeEncrypted), so nearby traffic is confidential in transit.
-
-import {
-  addDeviceFoundListener,
-  addEventListener,
-  connect,
-  discoverServices,
-  isBluetoothEnabled,
-  requestBluetoothPermission,
-  setServices,
-  startAdvertising,
-  startScan,
-  stopAdvertising,
-  stopScan,
-  writeCharacteristic,
-} from "munim-bluetooth";
+// Native composite mesh transport. Combines the two offline transports:
+//   - BLE (react-native-ble-plx)        -> low-power mesh chat over GATT
+//   - Wi-Fi Direct (react-native-wifi-p2p + tcp-socket) -> nearby device scanner
+//                                                          and a higher-bandwidth chat link
+//
+// Both transports satisfy the same MeshTransport contract; this layer fans out
+// broadcast/send to whichever links are live and merges the discovered peers
+// (deduplicated by id) into a single peer list for the UI. The protocol layer
+// still owns encryption, relay and de-duplication.
 
 import type { MeshPeer } from "@/src/types";
 import type { MeshStartOptions, MeshTransport, MeshTransportStatus } from "./meshProtocol";
 
-const SERVICE_UUID = "8f7d0001-5e21-4b9a-9a01-6a2e2b5d1000";
-const CHAT_UUID = "8f7d0002-5e21-4b9a-9a01-6a2e2b5d1000";
+import { createBleTransport } from "./mesh.ble";
+import { createWifiTransport } from "./wifiP2p.native";
 
-let removeFound: (() => void) | null = null;
-let removeWrite: (() => void) | null = null;
-const peers = new Map<string, MeshPeer>();
-
-function toHex(text: string): string {
-  return Array.from(new TextEncoder().encode(text))
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function fromHex(hex: string): string {
-  const bytes = new Uint8Array(hex.match(/.{1,2}/g)?.map((value) => parseInt(value, 16)) ?? []);
-  return new TextDecoder().decode(bytes);
-}
-
-class NativeMeshTransport implements MeshTransport {
+class HybridMeshTransport implements MeshTransport {
+  private ble = createBleTransport();
+  private wifi = createWifiTransport();
+  private blePeers = new Map<string, MeshPeer>();
+  private wifiPeers = new Map<string, MeshPeer>();
   private opts: MeshStartOptions | null = null;
 
   async start(opts: MeshStartOptions): Promise<MeshTransportStatus> {
     this.opts = opts;
-    const granted = await requestBluetoothPermission(["scan", "connect", "advertise"]);
-    if (!granted) return "denied";
-    if (!(await isBluetoothEnabled())) return "disabled";
 
-    setServices([{
-      uuid: SERVICE_UUID,
-      characteristics: [{
-        uuid: CHAT_UUID,
-        properties: ["read", "write", "writeWithoutResponse", "notify"],
-        permissions: ["readEncrypted", "writeEncrypted"],
-        value: "00",
-      }],
-    }]);
-    removeWrite?.();
-    removeWrite = addEventListener("peripheralWriteRequest", ({ centralId, value }) => {
-      try {
-        this.opts?.onFrame(fromHex(value), centralId);
-      } catch {
-        /* malformed frame */
-      }
-    });
-    removeFound?.();
-    removeFound = addDeviceFoundListener((device) => {
-      peers.set(device.id, {
-        id: device.id,
-        name: device.localName ?? device.name ?? "ResQ Peer",
-        rssi: device.rssi ?? -90,
-        paired: false,
-        online: true,
-        lastSeen: Date.now(),
+    const emitMerged = () => {
+      const byId = new Map<string, MeshPeer>();
+      [...this.blePeers.values(), ...this.wifiPeers.values()].forEach((peer) => {
+        const existing = byId.get(peer.id);
+        if (!existing || (peer.online && !existing.online)) byId.set(peer.id, peer);
       });
-      this.emitPeers();
+      this.opts?.onPeers([...byId.values()].sort((a, b) => b.rssi - a.rssi));
+    };
+
+    const bleStatus = await this.ble.start({
+      ...opts,
+      onPeers: (peers) => {
+        this.blePeers = new Map(peers.map((p) => [p.id, p]));
+        emitMerged();
+      },
+      onFrame: (raw, id) => this.opts?.onFrame(raw, id),
     });
-    startAdvertising({ serviceUUIDs: [SERVICE_UUID], localName: `ResQ-${opts.peerName.slice(0, 8)}` });
-    startScan({ serviceUUIDs: [SERVICE_UUID], allowDuplicates: true, scanMode: "balanced" });
-    return "active";
+
+    const wifiStatus = await this.wifi.start({
+      ...opts,
+      onPeers: (peers) => {
+        this.wifiPeers = new Map(peers.map((p) => [p.id, p]));
+        emitMerged();
+      },
+      onFrame: (raw, id) => this.opts?.onFrame(raw, id),
+    });
+
+    if (bleStatus === "active" || wifiStatus === "active") return "active";
+    return bleStatus !== "idle" ? bleStatus : wifiStatus;
   }
 
   async broadcast(raw: string): Promise<void> {
-    const targets = [...peers.keys()];
-    await Promise.all(targets.map(async (peerId) => {
-      try {
-        await connect(peerId);
-        await discoverServices(peerId);
-        await writeCharacteristic(peerId, SERVICE_UUID, CHAT_UUID, toHex(raw), "write");
-      } catch {
-        /* peer dropped mid-send */
-      }
-    }));
+    await Promise.all([this.ble.broadcast(raw), this.wifi.broadcast(raw)]);
   }
 
   async send(peerId: string, raw: string): Promise<void> {
-    try {
-      await connect(peerId);
-      await discoverServices(peerId);
-      await writeCharacteristic(peerId, SERVICE_UUID, CHAT_UUID, toHex(raw), "write");
-    } catch {
-      /* peer unreachable */
-    }
+    if (this.blePeers.has(peerId)) await this.ble.send(peerId, raw);
+    else await this.wifi.send(peerId, raw);
   }
 
   stop(): void {
-    stopScan();
-    stopAdvertising();
-    removeFound?.();
-    removeWrite?.();
-    removeFound = null;
-    removeWrite = null;
-    peers.clear();
-  }
-
-  private emitPeers() {
-    this.opts?.onPeers([...peers.values()].sort((a, b) => b.rssi - a.rssi));
+    this.ble.stop();
+    this.wifi.stop();
+    this.blePeers.clear();
+    this.wifiPeers.clear();
+    this.opts = null;
   }
 }
 
 export function createNativeTransport(): MeshTransport {
-  return new NativeMeshTransport();
+  return new HybridMeshTransport();
 }
 
 const transport = createNativeTransport();

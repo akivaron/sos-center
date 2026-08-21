@@ -16,7 +16,7 @@ Membangun aplikasi keselamatan mobile berbasis peta yang menampilkan laporan ben
 - **Backend:** FastAPI REST API pada prefix `/api`, Motor/MongoDB, geospatial `2dsphere` indexes, bearer sessions.
 - **Authentication:** callback Google ditukar server-side; session token disimpan aman di perangkat.
 - **Emergency data:** laporan dan SOS memakai custom IDs, GeoJSON coordinates `[longitude, latitude]`, dan endpoint radius terdekat.
-- **Offline transport:** `munim-bluetooth` central/peripheral mode untuk scan, advertise, connect, encrypted GATT characteristics, dan message delivery states.
+- **Offline transport:** `react-native-ble-plx` (GATT central) untuk mesh chat via Bluetooth Low Energy, dan `react-native-wifi-p2p` (Wi-Fi Direct) untuk pemindai perangkat terdekat sekaligus tautan chat bandwidth tinggi; keduanya digabung dalam composite transport yang menangani scan, connect, dan message delivery states.
 
 ## User Personas
 1. **Warga terdampak:** membutuhkan SOS cepat, peta risiko, dan komunikasi saat internet terputus.

@@ -104,6 +104,8 @@ export type MeshPeer = {
   lastSeen: number;
   /** True for locally simulated peers (web demo / responder). */
   simulated?: boolean;
+  /** Transport that discovered this peer. */
+  link?: "ble" | "wifi" | "sim";
 };
 
 export type MeshDelivery = "queued" | "relayed" | "sent" | "delivered" | "read" | "failed";
