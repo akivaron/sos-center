@@ -1,11 +1,17 @@
 // Expo config plugin for the ResQ offline mesh stack.
 //
-// Wires the native permissions required by the two mesh transports:
-//   - react-native-ble-plx  -> Bluetooth Low Energy mesh chat
-//   - react-native-wifi-p2p -> Wi-Fi Direct nearby device scanner
+// Wires the native permissions required by the offline mesh transports:
+//   - react-native-ble-plx            -> Bluetooth Low Energy mesh chat (central)
+//   - react-native-multi-ble-peripheral -> BLE peripheral (advertises the mesh
+//       service so phones can mesh without Wi-Fi Direct)
+//   - react-native-wifi-p2p           -> Wi-Fi Direct nearby device scanner
 //
 // This runs at prebuild time (expo prebuild / EAS development build) and is the
 // Expo-supported way to add native permissions without ejecting.
+//
+// NOTE: react-native-multi-ble-peripheral requires a development build (not
+// Expo Go) and, on Android SDK 33+, the `notifyCharacteristicChanged(... value)`
+// Kotlin patch from its README so peripheral notifications actually carry data.
 
 const { withInfoPlist, withAndroidManifest } = require("expo/config-plugins");
 

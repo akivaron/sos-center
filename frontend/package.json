@@ -49,6 +49,7 @@
     "react-native-web": "0.21.0",
     "react-native-worklets": "0.5.1",
     "react-native-ble-plx": "3.3.0",
+    "react-native-multi-ble-peripheral": "0.1.8",
     "react-native-wifi-p2p": "1.6.0",
     "react-native-tcp-socket": "6.2.0"
   },

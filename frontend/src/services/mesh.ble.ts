@@ -9,9 +9,10 @@
 //
 // NOTE: react-native-ble-plx is a GATT *client* (central) only — it cannot
 // advertise a local service. A peer is therefore reachable whenever *it*
-// advertises the ResQ service (e.g. the Wi-Fi Direct path, or another app's
-// peripheral). The composite transport in mesh.native.ts adds a Wi-Fi Direct
-// link so two ResQ phones can also chat without a third-party peripheral.
+// advertises the ResQ service. The composite transport in mesh.native.ts adds
+// two things so two ResQ phones can mesh phone-to-phone without a third-party
+// peripheral: a BLE peripheral (react-native-multi-ble-peripheral) that
+// advertises the ResQ service, and a Wi-Fi Direct link for higher bandwidth.
 
 import { PermissionsAndroid, Platform } from "react-native";
 
