@@ -57,16 +57,9 @@ interface PeripheralWriteEvent {
   value: string;
 }
 
-// The shipped types declare Peripheral as extending EventEmitter but omit the
-// listener methods, so add them back for our usage.
-interface PeripheralEmitter extends Peripheral {
-  on(event: string, listener: (...args: any[]) => void): this;
-  off(event: string, listener: (...args: any[]) => void): this;
-}
-
 class PeripheralMeshTransport implements MeshTransport {
   private opts: MeshStartOptions | null = null;
-  private peripheral: PeripheralEmitter | null = null;
+  private peripheral: Peripheral | null = null;
   private reassembler = new LinkReassembler();
   private advertising = false;
   private ready: Promise<MeshTransportStatus> | null = null;
@@ -88,9 +81,9 @@ class PeripheralMeshTransport implements MeshTransport {
   private ensureAdvertising(peerName: string): Promise<MeshTransportStatus> {
     if (this.ready) return this.ready;
     this.ready = new Promise<MeshTransportStatus>((resolve, reject) => {
-      let peripheral: PeripheralEmitter;
+      let peripheral: Peripheral;
       try {
-        peripheral = new Peripheral() as PeripheralEmitter;
+        peripheral = new Peripheral();
       } catch (err) {
         reject(err);
         return;
