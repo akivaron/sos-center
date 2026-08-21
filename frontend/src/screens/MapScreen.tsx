@@ -374,7 +374,7 @@ export function MapScreen({ copy, user, network, incidents, family, onFamilyPres
       </>}
 
       {showNav && route && (selectedIncident || selectedResource) ? (
-        <NavigationOverlay route={route} incident={selectedIncident} coordinates={location.coordinates} copy={copy} onExit={exitNavigation} destinationName={selectedResource?.name} />
+        <NavigationOverlay route={route} incident={selectedIncident} coordinates={location.coordinates} copy={copy} onExit={exitNavigation} destinationName={selectedResource?.name} bottomInset={insets.bottom} />
       ) : null}
 
       {duplicate ? (

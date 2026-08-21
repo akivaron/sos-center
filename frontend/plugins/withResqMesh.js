@@ -7,7 +7,7 @@
 // This runs at prebuild time (expo prebuild / EAS development build) and is the
 // Expo-supported way to add native permissions without ejecting.
 
-const { withInfoPlist, withAndroidPermissions, withAndroidManifest } = require("expo/config-plugins");
+const { withInfoPlist, withAndroidManifest } = require("expo/config-plugins");
 
 const IOS_STRINGS = {
   NSBluetoothAlwaysUsageDescription:
@@ -46,11 +46,6 @@ const withResqMesh = (config) => {
     return cfg;
   });
 
-  config = withAndroidPermissions(config, (cfg) => {
-    cfg.modResults = [...new Set([...(cfg.modResults ?? []), ...ANDROID_PERMISSIONS])];
-    return cfg;
-  });
-
   config = withAndroidManifest(config, async (cfg) => {
     const manifest = cfg.modResults.manifest;
     const existing = new Set((manifest["uses-permission"] ?? []).map((p) => p.$["android:name"]));
@@ -64,6 +59,7 @@ const withResqMesh = (config) => {
       existing.add(name);
     };
 
+    ANDROID_PERMISSIONS.forEach((name) => add(name));
     ANDROID_BLE_PERMISSIONS.forEach((name) => add(name));
     // Wi-Fi Direct device discovery on Android 13+ — used for comms, never location.
     add("android.permission.NEARBY_WIFI_DEVICES", {

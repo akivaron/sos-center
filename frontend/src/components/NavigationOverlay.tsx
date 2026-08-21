@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { Copy } from "../i18n";
-import { colors, radius, shadow } from "../theme";
+import { colors, radius, shadow, zIndex } from "../theme";
 import type { Coordinates, Incident } from "../types";
 import {
   bearingTo,
@@ -47,6 +47,7 @@ export function NavigationOverlay({
   copy,
   onExit,
   destinationName,
+  bottomInset = 0,
 }: {
   route: Route;
   incident: Incident | null;
@@ -54,7 +55,9 @@ export function NavigationOverlay({
   copy: Copy;
   onExit: () => void;
   destinationName?: string | null;
+  bottomInset?: number;
 }) {
+  const navBarHeight = 80 + bottomInset;
   const cumulative = useMemo(() => cumulativeDistances(route.coordinates), [route]);
 
   const projection = useMemo(
@@ -91,7 +94,7 @@ export function NavigationOverlay({
   const bearing = coordinates ? bearingTo(coordinates, destination) : 0;
 
   return (
-    <View style={styles.root} pointerEvents="box-none">
+    <View style={[styles.root, { zIndex: zIndex.overlay }]} pointerEvents="box-none">
       <View style={[styles.topBar, { backgroundColor: colors.surface }, shadow]} pointerEvents="auto">
         <Pressable onPress={onExit} style={styles.exit} hitSlop={10} testID="nav-exit-button">
           <MaterialCommunityIcons name="close" size={22} color={colors.ink} />
@@ -113,7 +116,7 @@ export function NavigationOverlay({
 
       <View style={styles.spacer} pointerEvents="none" />
 
-      <View style={[styles.card, { backgroundColor: colors.surface }, shadow]} pointerEvents="auto" testID="nav-card">
+      <View style={[styles.card, { bottom: navBarHeight + 28, backgroundColor: colors.surface }, shadow]} pointerEvents="auto" testID="nav-card">
         <View style={[styles.iconWrap, { backgroundColor: colors.brand }]}>
           <MaterialCommunityIcons name={MANEUVER_ICON[nextType] as never} size={42} color="#FFFFFF" />
         </View>
@@ -130,12 +133,12 @@ export function NavigationOverlay({
         </View>
       </View>
 
-      <View style={styles.destHint} pointerEvents="none">
+      <View style={[styles.destHint, { bottom: navBarHeight + 8 }]} pointerEvents="none">
         <MaterialCommunityIcons name="map-marker-alert" size={14} color={colors.inkSoft} />
         <Text style={styles.destText}>{destinationName ?? (incident ? copy[incident.incident_type] : copy.navDestination)}</Text>
       </View>
 
-      <View style={[styles.direction, shadow]} pointerEvents="none">
+      <View style={[styles.direction, { bottom: navBarHeight + 140 }, shadow]} pointerEvents="none">
         <MaterialCommunityIcons name="navigation" size={20} color={colors.brand} style={[{ transform: [{ rotate: `${bearing}deg` }] }]} />
         <Text style={styles.directionText}>{copy.navDestination} · {formatDistance(remaining, copy)}</Text>
       </View>
@@ -144,7 +147,7 @@ export function NavigationOverlay({
 }
 
 const styles = StyleSheet.create({
-  root: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  root: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: zIndex.overlay },
   topBar: { position: "absolute", top: 0, left: 0, right: 0, height: 64, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 12, paddingTop: 8 },
   exit: { flexDirection: "row", alignItems: "center", gap: 4 },
   exitText: { color: colors.ink, fontSize: 14, fontWeight: "700" },
@@ -154,14 +157,14 @@ const styles = StyleSheet.create({
   offRoute: { position: "absolute", top: 68, left: 16, right: 16, height: 34, borderRadius: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   offRouteText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
   spacer: { flex: 1 },
-  card: { position: "absolute", left: 12, right: 12, bottom: 28, borderRadius: radius.extraLarge, flexDirection: "row", alignItems: "center", padding: 16, gap: 16 },
+  card: { position: "absolute", left: 12, right: 12, borderRadius: radius.extraLarge, flexDirection: "row", alignItems: "center", padding: 16, gap: 16 },
   iconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
   cardBody: { flex: 1 },
   maneuver: { color: colors.ink, fontSize: 22, fontWeight: "800" },
   distance: { color: colors.brand, fontSize: 16, fontWeight: "700", marginTop: 2 },
   then: { color: colors.inkSoft, fontSize: 13, fontWeight: "600", marginTop: 4 },
-  destHint: { position: "absolute", bottom: 4, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  destHint: { position: "absolute", left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
   destText: { color: colors.inkSoft, fontSize: 11, fontWeight: "600" },
-  direction: { position: "absolute", bottom: 150, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9, ...shadow },
+  direction: { position: "absolute", alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surface, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9, ...shadow },
   directionText: { color: colors.ink, fontSize: 12, fontWeight: "700" },
 });
