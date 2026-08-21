@@ -58,7 +58,7 @@ class BleMeshTransport implements MeshTransport {
   private opts: MeshStartOptions | null = null;
   private links = new Map<string, Link>();
   private peers = new Map<string, MeshPeer>();
-  private scanSubscription: { remove(): void } | null = null;
+  private scanSubscription: Promise<void> | null = null;
   private stateSubscription: { remove(): void } | null = null;
 
   async start(opts: MeshStartOptions): Promise<MeshTransportStatus> {
@@ -191,7 +191,6 @@ class BleMeshTransport implements MeshTransport {
           SERVICE_UUID,
           CHAT_UUID,
           textToBase64(frame),
-          null,
         );
       }
     } catch {
@@ -201,9 +200,9 @@ class BleMeshTransport implements MeshTransport {
 
   stop(): void {
     const manager = this.manager;
-    this.scanSubscription?.remove();
-    this.stateSubscription?.remove();
     this.scanSubscription = null;
+    manager?.stopDeviceScan();
+    this.stateSubscription?.remove();
     this.stateSubscription = null;
     this.links.forEach((link) => link.monitor?.remove());
     if (manager) {

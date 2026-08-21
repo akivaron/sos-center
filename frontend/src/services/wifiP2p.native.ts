@@ -15,7 +15,9 @@
 import { PermissionsAndroid, Platform } from "react-native";
 // @ts-ignore - react-native-wifi-p2p ships without bundled types in some versions
 import WifiP2p from "react-native-wifi-p2p";
-import { TcpSocket } from "react-native-tcp-socket";
+import TcpSocket from "react-native-tcp-socket";
+
+type TcpSocketType = ReturnType<typeof TcpSocket.connect>;
 
 import type { MeshPeer } from "@/src/types";
 import type { MeshStartOptions, MeshTransport, MeshTransportStatus } from "./meshProtocol";
@@ -115,7 +117,7 @@ class WifiP2PStack implements MeshTransport {
       await WifiP2p.initialize();
       this.started = true;
 
-      const server = TcpSocket.createServer((socket: TcpSocket) => {
+      const server = TcpSocket.createServer((socket: TcpSocketType) => {
         const peerId = socket.remoteAddress ?? `wifi-${Math.random().toString(36).slice(2, 8)}`;
         const link = new SocketLink(socket as never, peerId, (raw, id) => this.opts?.onFrame(raw, id));
         this.links.set(peerId, link);
@@ -182,7 +184,7 @@ class WifiP2PStack implements MeshTransport {
     const address = this.lastConnectAddress ?? info.groupOwnerAddress;
     if (this.links.has(address)) return;
     try {
-      const socket = TcpSocket.connect({ host: info.groupOwnerAddress, port: PORT });
+      const socket = TcpSocket.connect({ host: info.groupOwnerAddress, port: PORT }, () => undefined);
       const link = new SocketLink(socket as never, address, (raw, id) => this.opts?.onFrame(raw, id));
       this.links.set(address, link);
     } catch {
