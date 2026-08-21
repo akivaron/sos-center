@@ -24,6 +24,7 @@ import { MapScreen } from "@/src/screens/MapScreen";
 import { ProfileScreen } from "@/src/screens/ProfileScreen";
 import { ReportsScreen } from "@/src/screens/ReportsScreen";
 import { FamilyCircleScreen } from "@/src/screens/FamilyCircleScreen";
+import { DonationsScreen } from "@/src/screens/DonationsScreen";
 import { SurvivalTutorialScreen } from "@/src/screens/SurvivalTutorialScreen";
 import { useFamilyCircle } from "@/src/hooks/useFamilyCircle";
 import { flushSOSQueue, queueSOS } from "@/src/services/sosQueue";
@@ -50,6 +51,7 @@ export default function Index() {
   const [familyOpen, setFamilyOpen] = useState(false);
   const [familyToast, setFamilyToast] = useState<string | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [donationsOpen, setDonationsOpen] = useState(false);
   const [privacy, setPrivacy] = useState<PrivacySettings | null>(null);
   const [focusIncidentId, setFocusIncidentId] = useState<string | null>(null);
   const copy = useMemo(() => getCopy(language), [language]);
@@ -176,7 +178,7 @@ export default function Index() {
         ) : tab === "chat" ? (
           <ChatScreen copy={copy} />
         ) : (
-          <ProfileScreen copy={copy} language={language} user={auth.user} isGuest={auth.isGuest} privacy={privacy} onLanguage={changeLanguage} onFamily={() => setFamilyOpen(true)} onTutorial={() => setTutorialOpen(true)} onPrivacyChange={setPrivacy} onLogout={() => void auth.logout()} onAccountDeleted={() => void auth.logout()} />
+          <ProfileScreen copy={copy} language={language} user={auth.user} isGuest={auth.isGuest} privacy={privacy} onLanguage={changeLanguage} onFamily={() => setFamilyOpen(true)} onTutorial={() => setTutorialOpen(true)} onDonations={() => setDonationsOpen(true)} onPrivacyChange={setPrivacy} onLogout={() => void auth.logout()} onAccountDeleted={() => void auth.logout()} />
         )}
       </View>
       {!hideTabs && !familyOpen ? (
@@ -216,6 +218,15 @@ export default function Index() {
       ) : null}
       {tutorialOpen ? (
         <SurvivalTutorialScreen copy={copy} language={language} onClose={() => setTutorialOpen(false)} />
+      ) : null}
+      {donationsOpen ? (
+        <DonationsScreen
+          copy={copy}
+          user={auth.user}
+          coordinates={location.coordinates}
+          incidents={incidents}
+          onClose={() => setDonationsOpen(false)}
+        />
       ) : null}
       <View style={styles.toastLayer} pointerEvents="box-none">
         <Toast message={sosToast} onDismiss={() => setSosToast(null)} />

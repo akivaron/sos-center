@@ -12,7 +12,7 @@ import { useBadges, type BadgeView } from "../hooks/useBadges";
 import { colors, radius, shadow, zIndex } from "../theme";
 import type { Language, PrivacySettings, User } from "../types";
 
-export function ProfileScreen({ copy, language, user, isGuest, privacy, onLanguage, onFamily, onTutorial, onPrivacyChange, onLogout, onAccountDeleted }: {
+export function ProfileScreen({ copy, language, user, isGuest, privacy, onLanguage, onFamily, onTutorial, onDonations, onPrivacyChange, onLogout, onAccountDeleted }: {
   copy: Copy;
   language: Language;
   user: User | null;
@@ -21,6 +21,7 @@ export function ProfileScreen({ copy, language, user, isGuest, privacy, onLangua
   onLanguage: (language: Language) => void;
   onFamily: () => void;
   onTutorial: () => void;
+  onDonations: () => void;
   onPrivacyChange: (privacy: PrivacySettings) => void;
   onLogout: () => void;
   onAccountDeleted: () => void;
@@ -127,6 +128,17 @@ export function ProfileScreen({ copy, language, user, isGuest, privacy, onLangua
           </View>
           <Pressable onPress={onFamily} hitSlop={8} style={({ pressed }) => [styles.familyOpen, pressed && styles.pressed]} testID="family-circle-open-button">
             <MaterialCommunityIcons name="chevron-right" size={22} color={colors.brand} />
+          </Pressable>
+        </View>
+
+        <View style={styles.infoCard}>
+          <View style={[styles.infoIcon, { backgroundColor: "#DCFCE7" }]}><MaterialCommunityIcons name="hand-heart" size={22} color={colors.success} /></View>
+          <View style={styles.infoBody}>
+            <Text style={styles.infoTitle}>{copy.donations}</Text>
+            <Text style={styles.infoText}>{copy.donationsSubtitle}</Text>
+          </View>
+          <Pressable onPress={onDonations} hitSlop={8} style={({ pressed }) => [styles.familyOpen, pressed && styles.pressed]} testID="donations-open-button">
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.success} />
           </Pressable>
         </View>
 

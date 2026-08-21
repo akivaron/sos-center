@@ -205,6 +205,49 @@ export type FamilyLocation = {
 
 export type SurvivalResourceType = "water" | "basecamp" | "shelter" | "food" | "camping" | "river" | "settlement";
 
+export type DonationTagKind = "incident" | "area";
+
+export type DonationPledge = {
+  id: string;
+  donor_id: string;
+  donor_name: string;
+  amount: number;
+  message: string;
+  created_at: string;
+};
+
+export type DonationPhoto = {
+  file_id: string;
+  photo_url: string;
+  uploaded_by: string;
+  uploaded_name: string;
+  created_at: string;
+};
+
+export type DonationCampaign = {
+  id: string;
+  title: string;
+  description: string;
+  target_amount: number;
+  collected_amount: number;
+  tag_kind: DonationTagKind;
+  incident_id?: string | null;
+  incident_type?: string | null;
+  area_name?: string | null;
+  longitude?: number | null;
+  latitude?: number | null;
+  organizer_id: string;
+  organizer_name: string;
+  pledges: DonationPledge[];
+  photos?: DonationPhoto[];
+  community_reports?: CommunityReport[];
+  verdict?: Verdict;
+  scam_reports?: number;
+  real_reports?: number;
+  created_at: string;
+  distance_meters?: number | null;
+};
+
 export type SurvivalResource = {
   id: string;
   type: SurvivalResourceType;

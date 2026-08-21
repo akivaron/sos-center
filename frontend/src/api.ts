@@ -2,7 +2,13 @@ import Constants from "expo-constants";
 
 import { Platform } from "react-native";
 
-import type { AppNotification, Coordinates, FamilyCircle, Incident, IncidentType, LocalPhoto, Severity, SOSSignal, User } from "./types";
+import type { AppNotification, Coordinates, DonationCampaign, FamilyCircle, Incident, IncidentType, LocalPhoto, Severity, SOSSignal, User } from "./types";
+
+export interface DonationReportInput {
+  kind: "scam" | "real";
+  reason?: string;
+  note?: string;
+}
 
 export interface BadgeStatsResponse {
   relays: number;
@@ -232,6 +238,59 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  donations: {
+    list: (coords?: Coordinates) => {
+      const query = coords
+        ? `?longitude=${coords.longitude}&latitude=${coords.latitude}&radius_meters=50000`
+        : "";
+      return request<DonationCampaign[]>(`/donations${query}`);
+    },
+    create: (input: {
+      title: string;
+      description?: string;
+      target_amount: number;
+      tag_kind: "incident" | "area";
+      incident_id?: string;
+      area_name?: string;
+      longitude?: number;
+      latitude?: number;
+    }) => request<DonationCampaign>("/donations", { method: "POST", body: JSON.stringify(input) }),
+    pledge: (campaignId: string, amount: number, message?: string) =>
+      request<DonationCampaign>(`/donations/${campaignId}/pledges`, {
+        method: "POST",
+        body: JSON.stringify({ amount, message: message ?? "" }),
+      }),
+    addPhoto: async (campaignId: string, photo: LocalPhoto) => {
+      const form = new FormData();
+      if (Platform.OS === "web") {
+        const blob = await (await fetch(photo.uri)).blob();
+        form.append("file", blob, photo.name);
+      } else {
+        form.append("file", { uri: photo.uri, name: photo.name, type: photo.type } as unknown as Blob);
+      }
+      const response = await fetch(`${baseUrl}/api/donations/${campaignId}/photos`, {
+        method: "POST",
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+        body: form,
+      });
+      if (!response.ok) {
+        let detail: string | undefined;
+        try {
+          const data = (await safeJson(response)) as { detail?: string } | null;
+          detail = data?.detail;
+        } catch {
+          /* ignore parse errors on the error body */
+        }
+        throw new Error(detail ?? `Upload failed (${response.status})`);
+      }
+      return (await safeJson(response)) as DonationCampaign;
+    },
+    report: (campaignId: string, input: DonationReportInput) =>
+      request<DonationCampaign>(`/donations/${campaignId}/reports`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+  },
   familyCircles: {
     mine: () => request<FamilyCircle[]>("/family-circles"),
     create: (name?: string) =>

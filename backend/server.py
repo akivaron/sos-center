@@ -344,6 +344,82 @@ class FamilyCircleResponse(BaseModel):
     members: list[FamilyMember] = []
 
 
+class DonationTagKind(str, Enum):
+    incident = "incident"
+    area = "area"
+
+
+class DonationPledgeCreate(BaseModel):
+    amount: int = Field(ge=1000, le=1_000_000_000)
+    message: str = Field(default="", max_length=200)
+
+
+class DonationPledge(BaseModel):
+    id: str
+    donor_id: str
+    donor_name: str
+    amount: int
+    message: str = ""
+    created_at: str
+
+
+class DonationCampaignCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    description: str = Field(default="", max_length=500)
+    target_amount: int = Field(ge=1000, le=10_000_000_000)
+    tag_kind: DonationTagKind
+    incident_id: str | None = Field(default=None, max_length=80)
+    area_name: str | None = Field(default=None, max_length=120)
+    longitude: float | None = None
+    latitude: float | None = None
+
+    @field_validator("longitude")
+    @classmethod
+    def valid_longitude(cls, value: float | None) -> float | None:
+        if value is not None and not -180 <= value <= 180:
+            raise ValueError("invalid longitude")
+        return value
+
+    @field_validator("latitude")
+    @classmethod
+    def valid_latitude(cls, value: float | None) -> float | None:
+        if value is not None and not -90 <= value <= 90:
+            raise ValueError("invalid latitude")
+        return value
+
+
+class DonationPhoto(BaseModel):
+    file_id: str
+    photo_url: str
+    uploaded_by: str
+    uploaded_name: str
+    created_at: str
+
+
+class DonationCampaign(BaseModel):
+    id: str
+    title: str
+    description: str
+    target_amount: int
+    collected_amount: int = 0
+    tag_kind: DonationTagKind
+    incident_id: str | None = None
+    incident_type: str | None = None
+    area_name: str | None = None
+    longitude: float | None = None
+    latitude: float | None = None
+    organizer_id: str
+    organizer_name: str
+    pledges: list[DonationPledge] = []
+    photos: list[DonationPhoto] = []
+    community_reports: list[CommunityReport] = []
+    verdict: str = "unverified"
+    scam_reports: int = 0
+    real_reports: int = 0
+    created_at: str
+    distance_meters: float | None = None
+
+
 def utc_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -549,6 +625,8 @@ async def lifespan(_: FastAPI):
         await db.circle_members.create_index([("circle_id", 1), ("user_id", 1)], unique=True)
         await db.circle_locations.create_index([("circle_id", 1), ("user_id", 1)], unique=True)
         await db.circle_locations.create_index([("location", "2dsphere")])
+        await db.donation_campaigns.create_index("id", unique=True)
+        await db.donation_campaigns.create_index([("location", "2dsphere")])
     try:
         await run_in_threadpool(init_storage)
     except Exception as exc:
@@ -1285,6 +1363,209 @@ async def remove_circle_member(circle_id: str, target_user_id: str, user: User =
             {"id": circle_id}, {"$set": {"owner_id": new_owner["user_id"]}}
         )
     return {"ok": True, "deleted": False}
+
+
+# ---------------------------------------------------------------------------
+# Donation campaigns: fundraisers tagged to an incident or a geographic area.
+# ---------------------------------------------------------------------------
+
+@api.post("/donations", response_model=DonationCampaign, status_code=201)
+async def create_donation_campaign(payload: DonationCampaignCreate, user: User = Depends(current_user)):
+    if payload.tag_kind == DonationTagKind.incident:
+        if not payload.incident_id:
+            raise HTTPException(status_code=400, detail="incident_id is required for incident-tagged campaigns")
+        incident = await db.incidents.find_one(
+            {"id": payload.incident_id}, {"_id": 0, "id": 1, "incident_type": 1, "longitude": 1, "latitude": 1}
+        )
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+    else:
+        if payload.longitude is None or payload.latitude is None:
+            raise HTTPException(status_code=400, detail="Coordinates are required for area-tagged campaigns")
+        incident = None
+
+    campaign = DonationCampaign(
+        id=f"don_{uuid.uuid4().hex[:14]}",
+        title=payload.title.strip(),
+        description=payload.description.strip(),
+        target_amount=payload.target_amount,
+        tag_kind=payload.tag_kind,
+        incident_id=payload.incident_id,
+        incident_type=(incident or {}).get("incident_type"),
+        area_name=(payload.area_name or "").strip() or None,
+        longitude=payload.longitude if incident is None else incident.get("longitude"),
+        latitude=payload.latitude if incident is None else incident.get("latitude"),
+        organizer_id=user.user_id,
+        organizer_name=user.name,
+        created_at=utc_iso(),
+    )
+    doc = campaign.model_dump()
+    doc["location"] = {
+        "type": "Point",
+        "coordinates": [campaign.longitude, campaign.latitude],
+    }
+    await db.donation_campaigns.insert_one(doc)
+    return campaign
+
+
+@api.get("/donations", response_model=list[DonationCampaign])
+async def list_donation_campaigns(
+    longitude: float | None = Query(default=None, ge=-180, le=180),
+    latitude: float | None = Query(default=None, ge=-90, le=90),
+    radius_meters: int = Query(default=50000, ge=500, le=500000),
+):
+    query: dict = {}
+    projection = {"_id": 0, "location": 0}
+    if longitude is not None and latitude is not None:
+        try:
+            rows = await db.donation_campaigns.find(
+                {
+                    "location": {
+                        "$near": {
+                            "$geometry": {"type": "Point", "coordinates": [longitude, latitude]},
+                            "$maxDistance": radius_meters,
+                        }
+                    }
+                },
+                projection,
+            ).limit(200).to_list(200)
+        except Exception:
+            rows = []
+        if not rows:
+            all_rows = await db.donation_campaigns.find({}, projection).sort("created_at", -1).limit(200).to_list(200)
+            rows = [
+                row for row in all_rows
+                if row.get("longitude") is not None and row.get("latitude") is not None
+                and haversine_deg(longitude, latitude, row["longitude"], row["latitude"]) <= radius_meters
+            ]
+    else:
+        rows = await db.donation_campaigns.find({}, projection).sort("created_at", -1).limit(200).to_list(200)
+    return [DonationCampaign(**row) for row in rows]
+
+
+def haversine_deg(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
+    from math import asin, cos, radians, sin, sqrt
+    lon1, lat1, lon2, lat2 = map(radians, (lon1, lat1, lon2, lat2))
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    return 6371000 * 2 * asin(sqrt(a))
+
+
+@api.post("/donations/{campaign_id}/pledges", response_model=DonationCampaign, status_code=200)
+async def pledge_donation(campaign_id: str, payload: DonationPledgeCreate, user: User = Depends(current_user)):
+    doc = await db.donation_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    pledge = DonationPledge(
+        id=f"pl_{uuid.uuid4().hex[:12]}",
+        donor_id=user.user_id,
+        donor_name=user.name,
+        amount=payload.amount,
+        message=payload.message.strip(),
+        created_at=utc_iso(),
+    )
+    updated = await db.donation_campaigns.find_one_and_update(
+        {"id": campaign_id},
+        {
+            "$push": {"pledges": pledge.model_dump()},
+            "$inc": {"collected_amount": payload.amount},
+        },
+        return_document=True,
+    )
+    result = DonationCampaign(**{key: value for key, value in updated.items() if key != "location"})
+    if result.tag_kind == DonationTagKind.incident and result.incident_id:
+        await notify_followers(
+            incident_id=result.incident_id,
+            incident_type=result.incident_type or "other",
+            exclude_user_id=user.user_id,
+            kind="donation",
+            title="Galang donasi",
+            body=f"{user.name} berdonasi ke \"{result.title}\".",
+        )
+    return result
+
+
+@api.post("/donations/{campaign_id}/photos", response_model=DonationCampaign, status_code=200)
+async def add_donation_photo(
+    campaign_id: str, file: UploadFile = File(...), user: User = Depends(current_user)
+):
+    """Attach a supporting photo to a donation campaign (max 4 per campaign)."""
+    doc = await db.donation_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if len(doc.get("photos") or []) >= 4:
+        raise HTTPException(status_code=400, detail="Campaign photo limit reached")
+    file_id, path, content_type, size = await store_image_file(file, user)
+    await db.media_files.insert_one({
+        "file_id": file_id,
+        "owner_id": user.user_id,
+        "storage_path": path,
+        "original_name": file.filename or f"donation.{content_type.split('/')[-1]}",
+        "content_type": content_type,
+        "size": size,
+        "created_at": utc_iso(),
+        "attached_to": campaign_id,
+    })
+    photo = DonationPhoto(
+        file_id=file_id,
+        photo_url=f"/api/donation-media/{file_id}",
+        uploaded_by=user.user_id,
+        uploaded_name=user.name,
+        created_at=utc_iso(),
+    )
+    updated = await db.donation_campaigns.find_one_and_update(
+        {"id": campaign_id},
+        {"$push": {"photos": photo.model_dump()}},
+        return_document=True,
+    )
+    return DonationCampaign(**{key: value for key, value in updated.items() if key != "location"})
+
+
+@api.get("/donation-media/{file_id}")
+async def public_donation_media(file_id: str):
+    file_doc = await db.media_files.find_one(
+        {"file_id": file_id, "attached_to": {"$ne": None}}, {"_id": 0}
+    )
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="Donation media not found")
+    campaign = await db.donation_campaigns.find_one(
+        {"id": file_doc["attached_to"], "photos.file_id": file_id}, {"_id": 0, "id": 1}
+    )
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Donation media not found")
+    try:
+        content, content_type = await run_in_threadpool(get_object, file_doc["storage_path"])
+    except requests.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="Donation media unavailable") from exc
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=300"},
+    )
+
+
+@api.post("/donations/{campaign_id}/reports", response_model=DonationCampaign, status_code=200)
+async def report_donation_campaign(campaign_id: str, payload: ReportCreate, user: User = Depends(current_user)):
+    """Community verification for a fundraiser (scam / real), same rules as incidents."""
+    doc = await db.donation_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    reports = [report for report in (doc.get("community_reports") or []) if report.get("reporter_id") != user.user_id]
+    reports.append({
+        "reporter_id": user.user_id,
+        "reporter_name": user.name,
+        "kind": payload.kind,
+        "reason": payload.reason or "",
+        "note": payload.note or "",
+        "created_at": utc_iso(),
+    })
+    verdict, scam, real = compute_verdict(reports)
+    await db.donation_campaigns.update_one(
+        {"id": campaign_id},
+        {"$set": {"community_reports": reports, "verdict": verdict, "scam_reports": scam, "real_reports": real}},
+    )
+    doc.update(community_reports=reports, verdict=verdict, scam_reports=scam, real_reports=real)
+    return DonationCampaign(**{key: value for key, value in doc.items() if key != "location"})
 
 
 app.include_router(api)

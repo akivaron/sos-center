@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
-from . import m0001_init_schema, m0002_password_auth, m0003_family_circles, m0004_followers_notifications
+from . import m0001_init_schema, m0002_password_auth, m0003_family_circles, m0004_followers_notifications, m0005_donation_campaigns
 
-MIGRATIONS = [m0001_init_schema, m0002_password_auth, m0003_family_circles, m0004_followers_notifications]
+MIGRATIONS = [m0001_init_schema, m0002_password_auth, m0003_family_circles, m0004_followers_notifications, m0005_donation_campaigns]
 
 
 def _utc_now() -> datetime:
