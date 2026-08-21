@@ -51,12 +51,6 @@
         }
       ],
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsVersion": "11.20.1"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Show nearby emergencies and your position."
@@ -71,11 +65,18 @@
       [
         "munim-bluetooth",
         {
-          "androidBluetoothPermissions": ["scan", "connect", "advertise"],
-          "multipeerServiceTypes": ["resq-mesh"],
+          "androidBluetoothPermissions": [
+            "scan",
+            "connect",
+            "advertise"
+          ],
+          "multipeerServiceTypes": [
+            "resq-mesh"
+          ],
           "localNetworkUsageDescription": "Find nearby devices for offline emergency chat."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true

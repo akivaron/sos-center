@@ -95,6 +95,16 @@
       "layout": "Centered layout. Large App Logo. Primary action 'Sign in with Google' using the Google logo."
     },
     {
+      "name": "FamilyCircle",
+      "purpose": "Private group where users add family members via an invite code and monitor each other's live location over GPS and the Bluetooth mesh network.",
+      "states": {
+        "loading": "Spinner on create/join buttons.",
+        "empty": "Illustration prompting the user to create or join a circle.",
+        "error": "Toast with the failure reason."
+      },
+      "layout": "Full-screen scrollable sheet. Header with back button and title. Each circle card shows its name, owner-only invite code, member list with live location (GPS or mesh source), distance, and recency, plus remove/leave actions. A create form (optional name) and a join form (invite code) sit at the bottom. Family member positions also appear as green (GPS) or blue (mesh) markers on the MapHome."
+    },
+    {
       "name": "MapHome",
       "purpose": "The primary dashboard. Full-screen map showing incident markers, network status, and immediate access to SOS.",
       "states": {

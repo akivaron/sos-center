@@ -50,7 +50,14 @@ Membangun aplikasi keselamatan mobile berbasis peta yang menampilkan laporan ben
 - Selesai: pengujian wizard terautentikasi, file chooser web, multipart upload, laporan lengkap, dan backend media workflow 16/16.
 - Selesai: marker peta berwarna dan berikon per kategori dengan severity dot, filter horizontal, count badge, serta legenda eksplisit.
 - Selesai: kartu informasi marker menampilkan severity, waktu, pelapor, deskripsi, korban, koordinat, kebutuhan bantuan, dan foto bukti publik.
-- Selesai: endpoint media insiden publik memverifikasi attachment sebelum menyajikan gambar; regresi backend langsung lulus 20/20.
+  - Selesai: endpoint media insiden publik memverifikasi attachment sebelum menyajikan gambar; regresi backend langsung lulus 20/20.
+
+### 2026-08-20
+- Selesai: MESH CHAT fitur lengkap. Protokol envelope (chat/announce/presence/typing/receipt) dengan flood relay ber-TTL dan de-duplikasi antar-perangkat.
+- Selesai: daftar percakapan per-peer + Siaran Mesh, badge pesan belum dibaca, preview, indikator online, dan indikator "sedang mengetik".
+- Selesai: enkripsi end-to-end 1:1 via pairing (kode bersama + fingerprint keamanan, HKDF + AES-GCM/HMAC-keystream) dan receipt terkirim/dibaca.
+- Selesai: persistensi lokal (AsyncStorage) untuk percakapan, riwayat pesan, identitas, dan pairing.
+- Selesai: simulasi mesh di web (BroadcastChannel lintas-tab + ResQ Responder) agar fitur dapat diuji tanpa dua perangkat fisik; transport BLE native tetap membawa envelope via GATT.
 
 ## Prioritized Backlog
 ### P0

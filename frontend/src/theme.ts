@@ -34,3 +34,9 @@ export const shadow = {
 } as const;
 
 export const radius = { small: 8, medium: 12, large: 16, extraLarge: 28, full: 999 } as const;
+
+export const zIndex = {
+  bottomNav: 10,
+  toast: 50,
+  overlay: 100,
+} as const;

@@ -5,10 +5,10 @@ import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { Copy } from "../i18n";
-import { colors, radius } from "../theme";
+import { colors, radius, shadow, zIndex } from "../theme";
 import type { IncidentType, LocalPhoto, ReportDraft, Severity } from "../types";
 
 const incidentOptions: { type: IncidentType; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
@@ -18,13 +18,16 @@ const incidentOptions: { type: IncidentType; icon: keyof typeof MaterialCommunit
 ];
 const severities: Severity[] = ["moderate", "high", "critical"];
 
-export function ReportFormModal({ visible, copy, loading, locationLabel, onClose, onSubmit }: {
+export function ReportFormModal({ visible, copy, loading, locationLabel, mode = "create", initialDraft, onClose, onSubmit, onSaveDraft }: {
   visible: boolean;
   copy: Copy;
   loading: boolean;
   locationLabel: string;
+  mode?: "create" | "edit";
+  initialDraft?: ReportDraft | null;
   onClose: () => void;
   onSubmit: (draft: ReportDraft) => void;
+  onSaveDraft?: (draft: ReportDraft) => void;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [incidentType, setIncidentType] = useState<IncidentType>("fire");
@@ -40,10 +43,25 @@ export function ReportFormModal({ visible, copy, loading, locationLabel, onClose
 
   useEffect(() => {
     if (!visible) return;
-    setStep(1); setDescription(""); setCasualtyCount("0");
-    setAssistanceNeeded(""); setPhoto(null); setPhotoIntent(false);
-    setPhotoBlocked(false); setPhotoError(false); setPermissionAttempts(0);
-  }, [visible]);
+    const draft = initialDraft ?? null;
+    setStep(1);
+    setIncidentType(draft?.incidentType ?? "fire");
+    setSeverity(draft?.severity ?? "high");
+    setDescription(draft?.description ?? "");
+    setCasualtyCount(String(draft?.casualtyCount ?? 0));
+    setAssistanceNeeded(draft?.assistanceNeeded ?? "");
+    setPhoto(draft?.photo ?? null);
+    setPhotoIntent(false);
+    setPhotoBlocked(false);
+    setPhotoError(false);
+    setPermissionAttempts(0);
+  }, [visible, initialDraft]);
+
+  const buildDraft = (): ReportDraft => ({
+    incidentType, severity, description: description.trim(),
+    casualtyCount: Math.max(0, Number.parseInt(casualtyCount || "0", 10) || 0),
+    assistanceNeeded: assistanceNeeded.trim(), photo,
+  });
 
   const pickPhoto = async () => {
     let permission = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -74,20 +92,23 @@ export function ReportFormModal({ visible, copy, loading, locationLabel, onClose
   };
 
   const submit = () => {
-    if (description.trim().length < 5 || assistanceNeeded.trim().length < 2 || !photo) {
-      if (!photo) setPhotoError(true);
+    if (description.trim().length < 5 || assistanceNeeded.trim().length < 2) {
       return;
     }
-    onSubmit({
-      incidentType, severity, description: description.trim(),
-      casualtyCount: Math.max(0, Number.parseInt(casualtyCount || "0", 10) || 0),
-      assistanceNeeded: assistanceNeeded.trim(), photo,
-    });
+    onSubmit(buildDraft());
   };
 
+  const saveDraft = () => {
+    onSaveDraft?.(buildDraft());
+  };
+
+  const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} animationType="slide" statusBarTranslucent>
-      <SafeAreaView style={styles.screen} edges={["top", "bottom"]} testID="incident-report-form">
+    <Modal transparent visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+    <View style={styles.overlay} testID="incident-report-form">
+      <Pressable style={styles.backdrop} onPress={onClose} testID="report-form-backdrop" />
+      <KeyboardAvoidingView style={[styles.sheet, { paddingBottom: insets.bottom }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <View style={styles.grabber} />
         <View style={styles.topAppBar}>
           <Pressable onPress={step === 1 ? onClose : () => setStep(1)} style={styles.iconButton} testID={step === 1 ? "report-close-button" : "report-back-button"}>
             <MaterialCommunityIcons name={step === 1 ? "close" : "arrow-left"} size={24} color={colors.ink} />
@@ -97,8 +118,8 @@ export function ReportFormModal({ visible, copy, loading, locationLabel, onClose
         </View>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: step === 1 ? "50%" : "100%" }]} /></View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.flex}>
+          <ScrollView style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.stepLabel}>{step === 1 ? copy.stepOne : copy.stepTwo}</Text>
             <Text style={styles.headline}>{step === 1 ? copy.chooseIncident : copy.description}</Text>
 
@@ -172,18 +193,29 @@ export function ReportFormModal({ visible, copy, loading, locationLabel, onClose
             )}
           </ScrollView>
           <View style={styles.bottomBar}>
+            {onSaveDraft ? (
+              <Pressable onPress={saveDraft} disabled={loading} style={({ pressed }) => [styles.draftButton, pressed && styles.pressed]} testID="report-save-draft-button">
+                <MaterialCommunityIcons name="content-save-outline" size={19} color={colors.primary} />
+                <Text style={styles.draftButtonText}>{copy.saveDraft}</Text>
+              </Pressable>
+            ) : null}
             <Pressable onPress={step === 1 ? () => setStep(2) : submit} disabled={loading} style={({ pressed }) => [styles.filledButton, pressed && styles.pressed, loading && styles.disabled]} testID={step === 1 ? "report-next-button" : "report-submit-button"}>
-              {loading ? <ActivityIndicator color={colors.onPrimary} /> : <><Text style={styles.filledButtonText}>{step === 1 ? copy.next : copy.sendReport}</Text><MaterialCommunityIcons name={step === 1 ? "arrow-right" : "send"} size={20} color={colors.onPrimary} /></>}
+              {loading ? <ActivityIndicator color={colors.onPrimary} /> : <><Text style={styles.filledButtonText}>{step === 1 ? copy.next : mode === "edit" ? copy.saveChanges : copy.sendReport}</Text><MaterialCommunityIcons name={step === 1 ? "arrow-right" : "send"} size={20} color={colors.onPrimary} /></>}
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.surface }, flex: { flex: 1 },
+  overlay: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: zIndex.overlay, justifyContent: "flex-end" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(33,26,25,0.42)" },
+  sheet: { flex: 1, backgroundColor: colors.surface, borderTopLeftRadius: radius.extraLarge, borderTopRightRadius: radius.extraLarge, overflow: "hidden", ...shadow },
+  grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginTop: 8, marginBottom: 4 },
+  flex: { flex: 1 },
   topAppBar: { height: 64, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8 },
   iconButton: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   appBarTitle: { flex: 1, color: colors.ink, fontSize: 22, fontWeight: "700" },
@@ -217,7 +249,9 @@ const styles = StyleSheet.create({
   photoCard: { height: 190, borderRadius: radius.large, overflow: "hidden", backgroundColor: colors.surfaceContainer }, photo: { width: "100%", height: 142 },
   photoAction: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }, photoActionText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
   errorText: { color: colors.brand, fontSize: 12, marginTop: 7 },
-  bottomBar: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
-  filledButton: { minHeight: 56, borderRadius: 28, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  bottomBar: { padding: 16, paddingTop: 8, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: "row", gap: 10 },
+  draftButton: { minHeight: 56, borderRadius: 28, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 18 },
+  draftButtonText: { color: colors.primary, fontSize: 15, fontWeight: "700" },
+  filledButton: { flex: 1, minHeight: 56, borderRadius: 28, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   filledButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "700" }, pressed: { opacity: 0.82 }, disabled: { opacity: 0.55 },
 });

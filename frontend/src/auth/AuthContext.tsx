@@ -18,6 +18,8 @@ type AuthValue = {
   error: string | null;
   isGuest: boolean;
   login: () => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   continueAsGuest: () => void;
   logout: () => Promise<void>;
 };
@@ -37,23 +39,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isGuest, setIsGuest] = useState(false);
   const capturedUrl = useRef<string | null>(null);
 
+  const applySession = useCallback(async (result: { session_token: string; user: User }) => {
+    await storage.secureSet(TOKEN_KEY, result.session_token);
+    setApiToken(result.session_token);
+    setUser(result.user);
+    setIsGuest(false);
+    setError(null);
+  }, []);
+
   const exchange = useCallback(async (sessionId: string) => {
     if (sentSessionIds.has(sessionId)) return false;
     sentSessionIds.add(sessionId);
     try {
       const result = await api.exchangeSession(sessionId);
-      await storage.secureSet(TOKEN_KEY, result.session_token);
-      setApiToken(result.session_token);
-      setUser(result.user);
-      setIsGuest(false);
-      setError(null);
+      await applySession(result);
       return true;
     } catch (reason) {
       sentSessionIds.delete(sessionId);
       setError(reason instanceof Error ? reason.message : "Authentication failed");
       return false;
     }
-  }, []);
+  }, [applySession]);
 
   useEffect(() => {
     const handleUrl = (url: string) => {
@@ -119,6 +125,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [exchange]);
 
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    setError(null);
+    try {
+      await applySession(await api.login(email, password));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Login failed");
+      throw reason;
+    }
+  }, [applySession]);
+
+  const register = useCallback(async (email: string, password: string, name?: string) => {
+    setError(null);
+    try {
+      await applySession(await api.register(email, password, name));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Registration failed");
+      throw reason;
+    }
+  }, [applySession]);
+
   const continueAsGuest = useCallback(() => {
     setIsGuest(true);
     setError(null);
@@ -132,8 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, error, isGuest, login, continueAsGuest, logout }),
-    [user, loading, error, isGuest, login, continueAsGuest, logout],
+    () => ({ user, loading, error, isGuest, login, loginWithEmail, register, continueAsGuest, logout }),
+    [user, loading, error, isGuest, login, loginWithEmail, register, continueAsGuest, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
