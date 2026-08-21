@@ -20,6 +20,7 @@ import {
   type MeshEnvelope,
   type PresencePayload,
   type ReceiptPayload,
+  type RelayAckPayload,
   type TypingPayload,
 } from "@/src/services/meshProtocol";
 import {
@@ -34,10 +35,18 @@ import {
 } from "@/src/services/meshCrypto";
 import { BROADCAST_ID, loadConversations, loadMessages, saveConversations, saveMessages } from "@/src/services/meshStore";
 import { meshBus } from "@/src/services/meshBus";
+import {
+  flushAnchorSeconds,
+  recordMuleTransfer,
+  recordRelay,
+  recordRelayAck,
+  signRelayAck,
+} from "@/src/services/badgeStore";
 
 const ANNOUNCE_INTERVAL_MS = 15000;
 const PRESENCE_INTERVAL_MS = 15000;
 const TYPING_CLEAR_MS = 4000;
+const ANCHOR_TICK_MS = 60000;
 
 type KnownPeer = MeshPeer & { publicKey?: string };
 
@@ -74,6 +83,8 @@ export function useMeshChat(user: User | null) {
   const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const announceCooldown = useRef<Map<string, number>>(new Map());
   const loopsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+  const anchorLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastRelayPeerIds = useRef<Set<string>>(new Set());
 
   // --- persistence bootstrap ------------------------------------------------
   useEffect(() => {
@@ -254,6 +265,37 @@ export function useMeshChat(user: User | null) {
     }
   }, [appendMessage, bumpConversation, ensureConversation, sendReceipt]);
 
+  /**
+   * Badge accounting for relaying someone else's packet: bump the local relay
+   * counter, detect cluster rotation (data-mule), and fire a signed relay ACK
+   * back toward the original sender as an offline proof of carriage.
+   */
+  const countRelayContribution = useCallback(async (env: MeshEnvelope) => {
+    void recordRelay();
+    const currentIds = new Set([...peerMapRef.current.keys()]);
+    const previous = lastRelayPeerIds.current;
+    let shared = false;
+    previous.forEach((id) => {
+      if (currentIds.has(id)) shared = true;
+    });
+    if (previous.size > 0 && !shared) void recordMuleTransfer();
+    lastRelayPeerIds.current = currentIds;
+
+    const identity = identityRef.current;
+    if (!identity) return;
+    try {
+      const sig = await signRelayAck(env.id, identity.id, identity.secret);
+      const raw = await createEnvelope({
+        from: identity.id, fromName: meName, to: env.from, kind: "relayack",
+        payload: encodePayload<RelayAckPayload>({ messageId: env.id, relayedBy: identity.id, sig }),
+        enc: false,
+      });
+      await broadcastMeshMessage(raw);
+    } catch {
+      /* ACK is best-effort — relay already happened */
+    }
+  }, [meName]);
+
   const handleFrame = useCallback(async (raw: string) => {
     const env = decodeEnvelope(raw);
     if (!env) {
@@ -304,16 +346,23 @@ export function useMeshChat(user: User | null) {
         markMine(payload.messageId, payload.status);
         return;
       }
+      case "relayack": {
+        const payload = decodePayload<RelayAckPayload>(env.payload);
+        if (!payload) return;
+        void recordRelayAck();
+        return;
+      }
       case "chat": {
         if (env.to === identityRef.current!.id || env.to === null) {
           await deliverChat(env);
         } else if (shouldRelay(env, identityRef.current!.id)) {
           await broadcastMeshMessage(relayEnvelope(env));
+          void countRelayContribution(env);
         }
         return;
       }
     }
-  }, [deliverChat, markMine, mergePeer, sendAnnounce]);
+  }, [countRelayContribution, deliverChat, markMine, mergePeer, sendAnnounce]);
 
   // --- lifecycle -------------------------------------------------------------
   const activate = useCallback(async () => {
@@ -342,6 +391,9 @@ export function useMeshChat(user: User | null) {
         const announceLoop = setInterval(() => void sendAnnounce(null), ANNOUNCE_INTERVAL_MS);
         const presenceLoop = setInterval(() => void sendPresence(true), PRESENCE_INTERVAL_MS);
         loopsRef.current = [announceLoop, presenceLoop];
+        if (!anchorLoopRef.current) {
+          anchorLoopRef.current = setInterval(() => void flushAnchorSeconds(60), ANCHOR_TICK_MS);
+        }
       } else {
         setStatus(result);
         setAttempts(nextAttempts);
@@ -357,6 +409,11 @@ export function useMeshChat(user: User | null) {
   const deactivate = useCallback(() => {
     loopsRef.current.forEach((t) => clearInterval(t));
     loopsRef.current = [];
+    if (anchorLoopRef.current) {
+      clearInterval(anchorLoopRef.current);
+      anchorLoopRef.current = null;
+    }
+    void flushAnchorSeconds(0).catch(() => undefined);
     void sendPresence(false).catch(() => undefined);
     meshBus.setBroadcast(null);
     stopMesh();
@@ -365,6 +422,7 @@ export function useMeshChat(user: User | null) {
 
   useEffect(() => () => {
     loopsRef.current.forEach((t) => clearInterval(t));
+    if (anchorLoopRef.current) clearInterval(anchorLoopRef.current);
     stopMesh();
     meshBus.setBroadcast(null);
   }, []);

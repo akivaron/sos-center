@@ -9,7 +9,7 @@ export const DEFAULT_TTL = 6;
 export const MAX_TTL = 12;
 export const SEEN_TTL_MS = 10 * 60 * 1000;
 
-export type MeshFrameKind = "chat" | "announce" | "presence" | "typing" | "receipt";
+export type MeshFrameKind = "chat" | "announce" | "presence" | "typing" | "receipt" | "relayack";
 
 export interface MeshEnvelope {
   v: number;
@@ -35,6 +35,13 @@ export interface ChatPayload {
 export interface ReceiptPayload {
   messageId: string;
   status: "delivered" | "read";
+}
+
+/** Signed acknowledgement: "packet received via device X" (badge proof). */
+export interface RelayAckPayload {
+  messageId: string;
+  relayedBy: string;
+  sig: string;
 }
 
 export interface PresencePayload {
