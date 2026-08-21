@@ -258,6 +258,14 @@ class SOSCreate(BaseModel):
     client_event_id: str = Field(min_length=8, max_length=80)
 
 
+class BadgeStatsPayload(BaseModel):
+    relays: int = Field(default=0, ge=0, le=10_000_000)
+    relay_acks: int = Field(default=0, ge=0, le=10_000_000)
+    mule_transfers: int = Field(default=0, ge=0, le=1_000_000)
+    anchor_seconds: int = Field(default=0, ge=0, le=100_000_000)
+    gateway_upload_events: int = Field(default=0, ge=0, le=1_000_000)
+
+
 class SOSSignal(BaseModel):
     id: str
     client_event_id: str
@@ -685,6 +693,34 @@ async def update_privacy(payload: PrivacyUpdate, user: User = Depends(current_us
     await db.users.update_one({"user_id": user.user_id}, {"$set": update})
     doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
     return {"ok": True, "hide_gps": bool(doc.get("hide_gps", False)), "hide_mesh": bool(doc.get("hide_mesh", False))}
+
+
+BADGE_FIELDS = ("relays", "relay_acks", "mule_transfers", "anchor_seconds", "gateway_upload_events")
+
+
+def badges_from_doc(doc: dict) -> dict:
+    return {field: int(doc.get("badge_" + field, 0) or 0) for field in BADGE_FIELDS}
+
+
+@api.post("/badges/sync")
+async def sync_badges(payload: BadgeStatsPayload, user: User = Depends(current_user)):
+    # Monotonic merge: offline counters can only grow, so never let a stale
+    # device overwrite higher values already recorded from another sync.
+    incoming = payload.model_dump()
+    doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    update = {
+        "badge_" + field: max(int(doc.get("badge_" + field, 0) or 0), incoming[field])
+        for field in BADGE_FIELDS
+    }
+    update["updated_at"] = utc_iso()
+    await db.users.update_one({"user_id": user.user_id}, {"$set": update})
+    return {"ok": True, "badges": badges_from_doc({**doc, **update})}
+
+
+@api.get("/badges")
+async def get_badges(user: User = Depends(current_user)):
+    doc = await db.users.find_one({"user_id": user.user_id}, {"_id": 0}) or {}
+    return badges_from_doc(doc)
 
 
 @api.delete("/auth/account")

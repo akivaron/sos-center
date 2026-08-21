@@ -8,6 +8,7 @@ import { api } from "../api";
 import type { Copy } from "../i18n";
 import { NotificationBell } from "../components/NotificationBell";
 import { useNotifications } from "../context/NotificationContext";
+import { useBadges, type BadgeView } from "../hooks/useBadges";
 import { colors, radius, shadow, zIndex } from "../theme";
 import type { Language, PrivacySettings, User } from "../types";
 
@@ -30,6 +31,7 @@ export function ProfileScreen({ copy, language, user, isGuest, privacy, onLangua
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { unreadCount, openCenter } = useNotifications();
+  const { badges } = useBadges(user);
 
   const showToast = (message: string) => setToast(message);
   const [pinSet, setPinSet] = useState(user?.pin_set ?? false);
@@ -63,6 +65,13 @@ export function ProfileScreen({ copy, language, user, isGuest, privacy, onLangua
             <Pressable key={item} onPress={() => onLanguage(item)} style={[styles.segmentButton, language === item && styles.segmentActive]} testID={`profile-language-${item}-button`}>
               <Text style={[styles.segmentText, language === item && styles.segmentTextActive]}>{item === "id" ? "Bahasa Indonesia" : "English"}</Text>
             </Pressable>
+          ))}
+        </View>
+
+        <Text style={styles.sectionLabel}>Badge Kontribusi Mesh</Text>
+        <View style={styles.badgeGrid}>
+          {badges.map((badge) => (
+            <BadgeCard key={badge.id} badge={badge} language={language} />
           ))}
         </View>
 
@@ -147,6 +156,37 @@ export function ProfileScreen({ copy, language, user, isGuest, privacy, onLangua
         {toast ? <Pressable onPress={() => setToast(null)} style={styles.toast} testID="profile-toast"><View style={styles.toastIcon}><MaterialCommunityIcons name="shield-check" size={19} color="#FFFFFF" /></View><Text style={styles.toastText}>{toast}</Text></Pressable> : null}
       </View>
     </SafeAreaView>
+  );
+}
+
+const LEVEL_COLORS: Record<string, string> = {
+  bronze: "#B08D57",
+  silver: "#9CA3AF",
+  gold: "#D4A017",
+};
+
+function BadgeCard({ badge, language }: { badge: BadgeView; language: Language }) {
+  const unlocked = badge.level !== "none";
+  const levelColor = unlocked ? LEVEL_COLORS[badge.level] : colors.outline;
+  const title = language === "id" ? badge.titleId : badge.titleEn;
+  const desc = language === "id" ? badge.descId : badge.descEn;
+  const progress = language === "id" ? badge.unitId(badge.value) : badge.unitEn(badge.value);
+  return (
+    <View style={[styles.badgeCard, !unlocked && styles.badgeCardLocked, { borderColor: levelColor }]} testID={`mesh-badge-${badge.id}`}>
+      <View style={styles.badgeCardTop}>
+        <MaterialCommunityIcons name={unlocked ? (badge.icon as never) : "lock-outline"} size={22} color={levelColor} />
+        {unlocked ? (
+          <View style={[styles.levelChip, { backgroundColor: levelColor }]}>
+            <Text style={styles.levelChipText}>{badge.level.toUpperCase()}</Text>
+          </View>
+        ) : (
+          <Text style={styles.badgeLockedLabel}>{language === "id" ? "Terkunci" : "Locked"}</Text>
+        )}
+      </View>
+      <Text style={[styles.badgeCardTitle, !unlocked && styles.badgeCardMuted]}>{title}</Text>
+      <Text style={[styles.badgeCardDesc, !unlocked && styles.badgeCardMuted]} numberOfLines={2}>{desc}</Text>
+      <Text style={[styles.badgeCardProgress, !unlocked && styles.badgeCardMuted]}>{progress}</Text>
+    </View>
   );
 }
 
@@ -433,4 +473,15 @@ const styles = StyleSheet.create({
   toast: { position: "absolute", top: 8, left: 18, right: 18, minHeight: 56, paddingHorizontal: 16, borderRadius: 4, backgroundColor: "#322F2E", flexDirection: "row", alignItems: "center", gap: 12, ...shadow },
   toastIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.success, alignItems: "center", justifyContent: "center" },
   toastText: { flex: 1, color: "#FFFFFF", fontSize: 14, lineHeight: 20, fontWeight: "500" },
+  badgeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 4 },
+  badgeCard: { flexGrow: 1, flexBasis: "46%", borderWidth: 1.5, borderRadius: radius.medium, backgroundColor: colors.surface, padding: 14 },
+  badgeCardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  levelChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  levelChipText: { color: "#FFFFFF", fontSize: 10, fontWeight: "800" },
+  badgeCardTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  badgeCardDesc: { color: colors.inkSoft, fontSize: 11, lineHeight: 15, marginTop: 3 },
+  badgeCardProgress: { color: colors.primary, fontSize: 11, fontWeight: "700", marginTop: 6 },
+  badgeCardLocked: { opacity: 0.55, backgroundColor: colors.surfaceContainer },
+  badgeLockedLabel: { color: colors.inkSoft, fontSize: 10, fontWeight: "700" },
+  badgeCardMuted: { color: colors.inkSoft },
 });

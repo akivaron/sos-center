@@ -4,6 +4,14 @@ import { Platform } from "react-native";
 
 import type { AppNotification, Coordinates, FamilyCircle, Incident, IncidentType, LocalPhoto, Severity, SOSSignal, User } from "./types";
 
+export interface BadgeStatsResponse {
+  relays: number;
+  relay_acks: number;
+  mule_transfers: number;
+  anchor_seconds: number;
+  gateway_upload_events: number;
+}
+
 const configuredUrl = Constants.expoConfig?.extra?.backendUrl as string | undefined;
 const baseUrl = configuredUrl ?? process.env.EXPO_PUBLIC_BACKEND_URL ?? "";
 let sessionToken: string | null = null;
@@ -201,6 +209,24 @@ export const api = {
   incidentFollowStatus: (id: string) =>
     request<{ following: boolean; follower_count: number }>(`/incidents/${id}/follow`),
   getNotifications: () => request<AppNotification[]>("/notifications"),
+  syncBadges: (stats: {
+    relays: number;
+    relayAcks: number;
+    muleTransfers: number;
+    anchorSeconds: number;
+    gatewayUploads: number;
+  }) =>
+    request<{ ok: boolean; badges: BadgeStatsResponse }>("/badges/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        relays: stats.relays,
+        relay_acks: stats.relayAcks,
+        mule_transfers: stats.muleTransfers,
+        anchor_seconds: stats.anchorSeconds,
+        gateway_upload_events: stats.gatewayUploads,
+      }),
+    }),
+  getBadges: () => request<BadgeStatsResponse>("/badges"),
   markNotificationsRead: (input: { ids?: string[]; all?: boolean }) =>
     request<{ ok: boolean; updated: number }>("/notifications/read", {
       method: "POST",
