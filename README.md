@@ -202,4 +202,6 @@ From the repository root:
 
 ## License
 
-See repository for license details.
+Licensed under the [Apache License, Version 2.0](./LICENSE).
+
+Copyright &copy; 2026 Isna Nur Azis. Licensed under the Apache License, Version 2.0 (the "License"); you may not use the files in this repository except in compliance with the License.
